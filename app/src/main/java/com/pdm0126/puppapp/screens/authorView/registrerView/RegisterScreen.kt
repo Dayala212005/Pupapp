@@ -1,0 +1,168 @@
+package com.pdm0126.puppapp.screens.authorView.registrerView
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RegisterScreen(
+    onNavigateBack: () -> Unit = {}
+) {
+    var businessName     by remember { mutableStateOf("") }
+    var sessionName      by remember { mutableStateOf("") }
+    var password         by remember { mutableStateOf("") }
+    var confirmPassword  by remember { mutableStateOf("") }
+    var passwordVisible  by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("Crear cuenta", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text  = "Registra tu pupusería",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector        = Icons.Filled.ArrowBack,
+                            contentDescription = "Regresar",
+                            tint               = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor    = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 20.dp)
+        ) {
+            OutlinedTextField(
+                value         = businessName,
+                onValueChange = { businessName = it },
+                label         = { Text("Nombre del negocio") },
+                placeholder   = { Text("Pupusería El Comal") },
+                singleLine    = true,
+                shape         = RoundedCornerShape(10.dp),
+                modifier      = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value         = sessionName,
+                onValueChange = { sessionName = it },
+                label         = { Text("Nombre de sesión") },
+                placeholder   = { Text("el_comal") },
+                singleLine    = true,
+                shape         = RoundedCornerShape(10.dp),
+                modifier      = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text     = "Este nombre se usará para iniciar sesión.",
+                fontSize = 11.sp,
+                color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value         = password,
+                onValueChange = { password = it },
+                label         = { Text("Contraseña") },
+                singleLine    = true,
+                shape         = RoundedCornerShape(10.dp),
+                visualTransformation = if (passwordVisible)
+                    VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = null
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value         = confirmPassword,
+                onValueChange = { confirmPassword = it },
+                label         = { Text("Confirmar contraseña") },
+                singleLine    = true,
+                shape         = RoundedCornerShape(10.dp),
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(28.dp))
+
+            Button(
+                onClick  = {},
+                shape    = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text("Crear cuenta", fontWeight = FontWeight.Medium)
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment     = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("¿Ya tienes cuenta?", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = onNavigateBack) {
+                    Text("Inicia sesión", fontSize = 14.sp)
+                }
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun PreviewRegister() {
+    RegisterScreen ()
+}
