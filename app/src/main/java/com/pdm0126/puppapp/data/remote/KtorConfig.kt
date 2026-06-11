@@ -57,14 +57,11 @@ object KtorClient {
                         val refreshClient = HttpClient(OkHttp) {
                             install(ContentNegotiation) { json() }
                         }
-                        
                         val response = refreshClient.post("$BASE_URL/auth/refresh") {
                             contentType(ContentType.Application.Json)
                             setBody(RefreshRequest(refreshToken))
                         }.body<RefreshResponse>()
-
-                        sessionManager.saveTokens(response.accessToken, refreshToken)
-
+                        sessionManager.updateTokens(response.accessToken, refreshToken)
                         BearerTokens(response.accessToken, refreshToken)
                     } catch (e: Exception) {
                         sessionManager.clearSession()

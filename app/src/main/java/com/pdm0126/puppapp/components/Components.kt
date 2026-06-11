@@ -1,7 +1,13 @@
 package com.pdm0126.puppapp.components
 
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,9 +20,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.pdm0126.puppapp.ui.Amber40
 import com.pdm0126.puppapp.ui.Green40
 import com.pdm0126.puppapp.ui.Red40
@@ -184,6 +192,75 @@ fun OrderCard(order: OrderPreview, modifier: Modifier = Modifier) {
             ) {
                 Text("${order.itemCount} productos", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("\$%.2f".format(order.total), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+
+    @Composable
+    fun ImagePickerField(
+        selectedUri: Uri?,
+        onImageSelected: (Uri?) -> Unit,
+        modifier: Modifier = Modifier
+    ) {
+        val launcher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickVisualMedia()
+        ) { uri ->
+            onImageSelected(uri)
+        }
+
+        Card(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(160.dp)
+                .clickable {
+                    launcher.launch(
+                        PickVisualMediaRequest(
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                        )
+                    )
+                },
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            ),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                if (selectedUri != null) {
+                    AsyncImage(
+                        model = selectedUri,
+                        contentDescription = "Selected image",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    // Botón flotante para editar si ya hay imagen
+                    Box(Modifier
+                        .fillMaxSize()
+                        .padding(8.dp), contentAlignment = Alignment.BottomEnd) {
+                        FilledTonalIconButton(
+                            onClick = { launcher.launch(PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Editar", modifier = Modifier.size(16.dp))
+                        }
+                    }
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Outlined.AddPhotoAlternate,
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Subir imagen del producto",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
