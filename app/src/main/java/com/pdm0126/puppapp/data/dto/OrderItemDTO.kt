@@ -7,16 +7,16 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class OrderItemDTO(
     val id: Int,
-    @SerialName("order_id") val orderId: Int,
-    @SerialName("product_name") val productName: String,
+    val orderId: Int? = null,
+    val productName: String? = null,
     val quantity: Int,
-    @SerialName("price_at_time") val priceAtTime: Double
+    @SerialName("price_per_dish") val pricePerDish: String
 )
 
 fun OrderItemDTO.toModel() = OrderItem(
     id = id,
-    orderId = orderId,
-    productName = productName,
+    orderId = orderId ?: 0,
+    productName = productName ?: "Producto desconocido",
     quantity = quantity,
-    pricePerDish = priceAtTime
+    pricePerDish = pricePerDish.toDoubleOrNull() ?: 0.0
 )

@@ -83,7 +83,7 @@ fun RegisterScreen(
             OutlinedTextField(
                 value         = sessionName,
                 onValueChange = { sessionName = it },
-                label         = { Text("Nombre de sesión") },
+                label         = { Text("Nombre de acceso") },
                 placeholder   = { Text("el_comal") },
                 singleLine    = true,
                 shape         = RoundedCornerShape(10.dp),
@@ -92,7 +92,7 @@ fun RegisterScreen(
 
             Spacer(Modifier.height(4.dp))
             Text(
-                text     = "Este nombre se usará para iniciar sesión.",
+                text     = "Este nombre se usará para iniciar sesión. Recuerdalo",
                 fontSize = 11.sp,
                 color    = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 4.dp)

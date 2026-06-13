@@ -51,18 +51,30 @@ object KtorClient {
                 }
 
                 refreshTokens {
+                    // El bloque refreshTokens se dispara cuando recibe un 401.
+                    val oldTokens = this.oldTokens
                     val refreshToken = sessionManager.getRefreshToken() ?: return@refreshTokens null
                     
                     try {
                         val refreshClient = HttpClient(OkHttp) {
-                            install(ContentNegotiation) { json() }
+                            install(ContentNegotiation) { 
+                                json(Json { ignoreUnknownKeys = true }) 
+                            }
                         }
-                        val response = refreshClient.post("$BASE_URL/auth/refresh") {
+                        
+                        val response = refreshClient.post("$BASE_URL/api/auth/refresh") {
                             contentType(ContentType.Application.Json)
                             setBody(RefreshRequest(refreshToken))
-                        }.body<RefreshResponse>()
-                        sessionManager.updateTokens(response.accessToken, refreshToken)
-                        BearerTokens(response.accessToken, refreshToken)
+                        }
+
+                        if (response.status.value == 200 || response.status.value == 201) {
+                            val body = response.body<RefreshResponse>()
+                            sessionManager.updateTokens(body.accessToken, refreshToken)
+                            BearerTokens(body.accessToken, refreshToken)
+                        } else {
+                            sessionManager.clearSession()
+                            null
+                        }
                     } catch (e: Exception) {
                         sessionManager.clearSession()
                         null
