@@ -18,16 +18,12 @@ val tmdbToken: String = localProperties.getProperty("TMDB_TOKEN") ?: ""
 
 android {
     namespace = "com.pdm0126.puppapp"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.pdm0126.puppapp"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
 
@@ -64,6 +60,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.auth)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.client.logging)

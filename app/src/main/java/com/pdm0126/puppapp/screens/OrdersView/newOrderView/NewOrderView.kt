@@ -144,7 +144,7 @@ private fun ProductRow(item: MenuItemUi) {
                     color = MaterialTheme.colorScheme.primary
                 )
             }
-            QuantityControl(quantity = item.quantity)
+            //QuantityControl(quantity = item.quantity)
         }
     }
 }

@@ -24,14 +24,7 @@ import com.pdm0126.puppapp.components.SectionHeader
 
 // ── Data ────────────────────────────────────────────────────────────────────
 
-private val historyOrders = listOf(
-    OrderPreview("010", "Rosa Hernández", "Ayer 3:15 PM", 4, 5.25, OrderStatus.COMPLETED),
-    OrderPreview("009", "Pedro Díaz",     "Ayer 2:40 PM",  2, 2.50, OrderStatus.COMPLETED),
-    OrderPreview("008", "Luisa Flores",   "Ayer 1:10 PM",  6, 8.00, OrderStatus.CANCELLED),
-    OrderPreview("007", "Miguel Torres",  "Ayer 12:00 PM", 3, 3.75, OrderStatus.COMPLETED),
-    OrderPreview("006", "Carmen Vásquez", "Ayer 11:30 AM", 1, 1.00, OrderStatus.COMPLETED),
-    OrderPreview("005", "Roberto Lima",   "Ayer 10:55 AM", 5, 6.50, OrderStatus.CANCELLED),
-)
+
 
 private val filterOptions = listOf("Todos", "Completadas", "Canceladas")
 
@@ -105,10 +98,7 @@ fun HistoryScreen(onSelectTab: (Int) -> Unit = {}) {
             }
 
             // Order list
-            items(historyOrders) { order ->
-                OrderCard(order)
-                Spacer(Modifier.height(8.dp))
-            }
+
         }
     }
 }

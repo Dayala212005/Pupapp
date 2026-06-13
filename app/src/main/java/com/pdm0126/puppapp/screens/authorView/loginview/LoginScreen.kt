@@ -20,20 +20,33 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit = {},
-    onNavigateToOrders: () -> Unit = {}
+    onNavigateToOrders: () -> Unit = {},
+    viewModel: LoginViewModel = viewModel()
 ) {
-    var sessionName    by remember { mutableStateOf("") }
-    var password       by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(viewModel.loginSuccess) {
+        if (viewModel.loginSuccess) {
+            viewModel.resetLoginState()
+            onNavigateToOrders()
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color    = MaterialTheme.colorScheme.background
     ) {
+        if (viewModel.isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
@@ -88,19 +101,20 @@ fun LoginScreen(
                     Spacer(Modifier.height(16.dp))
 
                     OutlinedTextField(
-                        value         = sessionName,
-                        onValueChange = { sessionName = it },
-                        label         = { Text("Nombre de sesión") },
+                        value         = viewModel.sessionName,
+                        onValueChange = { viewModel.sessionName = it },
+                        label         = { Text("Nombre de acceso") },
                         singleLine    = true,
                         shape         = RoundedCornerShape(10.dp),
-                        modifier      = Modifier.fillMaxWidth()
+                        modifier      = Modifier.fillMaxWidth(),
+                        enabled       = !viewModel.isLoading
                     )
 
                     Spacer(Modifier.height(12.dp))
 
                     OutlinedTextField(
-                        value         = password,
-                        onValueChange = { password = it },
+                        value         = viewModel.password,
+                        onValueChange = { viewModel.password = it },
                         label         = { Text("Contraseña") },
                         singleLine    = true,
                         shape         = RoundedCornerShape(10.dp),
@@ -116,14 +130,25 @@ fun LoginScreen(
                                 )
                             }
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled  = !viewModel.isLoading
                     )
+
+                    viewModel.errorMessage?.let { error ->
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
 
                     Spacer(Modifier.height(8.dp))
 
                     TextButton(
                         onClick  = {},
-                        modifier = Modifier.align(Alignment.End)
+                        modifier = Modifier.align(Alignment.End),
+                        enabled  = !viewModel.isLoading
                     ) {
                         Text("¿Olvidaste tu contraseña?", fontSize = 12.sp)
                     }
@@ -131,11 +156,12 @@ fun LoginScreen(
                     Spacer(Modifier.height(4.dp))
 
                     Button(
-                        onClick  = onNavigateToOrders,
+                        onClick  = { viewModel.onLoginClick() },
                         shape    = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(48.dp),
+                        enabled  = !viewModel.isLoading
                     ) {
                         Text("Iniciar sesión", fontWeight = FontWeight.Medium)
                     }
@@ -146,7 +172,7 @@ fun LoginScreen(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("¿No tienes cuenta?", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = onNavigateToRegister) {
+                TextButton(onClick = onNavigateToRegister, enabled = !viewModel.isLoading) {
                     Text("Regístrate", fontSize = 14.sp)
                 }
             }
