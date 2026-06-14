@@ -19,6 +19,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.pdm0126.puppapp.data.local.SessionManager
 import com.pdm0126.puppapp.screens.OrdersView.activeOrderView.ActiveOrdersScreen
 import com.pdm0126.puppapp.screens.authorView.loginview.LoginScreen
+import com.pdm0126.puppapp.screens.authorView.registrerView.RegisterScreen
 
 @Composable
 fun PupappNavigation(sessionManager: SessionManager) {
@@ -41,8 +42,11 @@ fun PupappNavigation(sessionManager: SessionManager) {
                 )
             }
             entry<Route.Register> {
-                // RegisterScreen(...)
-                Box(Modifier.fillMaxSize())
+                RegisterScreen(
+                    onNavigateBack = {
+                        backStack.removeLastOrNull()
+                    }
+                )
             }
             entry<Route.Orders> {
                 ActiveOrdersScreen(

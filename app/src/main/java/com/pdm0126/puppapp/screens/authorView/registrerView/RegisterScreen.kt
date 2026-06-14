@@ -20,17 +20,22 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    viewModel: RegisterViewModel = viewModel()
 ) {
-    var businessName     by remember { mutableStateOf("") }
-    var sessionName      by remember { mutableStateOf("") }
-    var password         by remember { mutableStateOf("") }
-    var confirmPassword  by remember { mutableStateOf("") }
-    var passwordVisible  by remember { mutableStateOf(false) }
+    val businessName    by viewModel.businessName.collectAsState()
+    val sessionName     by viewModel.sessionName.collectAsState()
+    val password        by viewModel.password.collectAsState()
+    val confirmPassword by viewModel.confirmPassword.collectAsState()
+    val passwordVisible by viewModel.passwordVisible.collectAsState()
+    val isLoading       by viewModel.isLoading.collectAsState()
+    val errorMessage    by viewModel.errorMessage.collectAsState()
+    val registerSuccess by viewModel.registerSuccess.collectAsState()
 
     Scaffold(
         topBar = {
@@ -70,7 +75,7 @@ fun RegisterScreen(
         ) {
             OutlinedTextField(
                 value         = businessName,
-                onValueChange = { businessName = it },
+                onValueChange = { viewModel.onBusinessNameChange(it) },
                 label         = { Text("Nombre del negocio") },
                 placeholder   = { Text("Pupusería El Comal") },
                 singleLine    = true,
@@ -82,7 +87,7 @@ fun RegisterScreen(
 
             OutlinedTextField(
                 value         = sessionName,
-                onValueChange = { sessionName = it },
+                onValueChange = { viewModel.onSessionNameChange(it) },
                 label         = { Text("Nombre de acceso") },
                 placeholder   = { Text("el_comal") },
                 singleLine    = true,
@@ -102,7 +107,7 @@ fun RegisterScreen(
 
             OutlinedTextField(
                 value         = password,
-                onValueChange = { password = it },
+                onValueChange = { viewModel.onPasswordChange(it) },
                 label         = { Text("Contraseña") },
                 singleLine    = true,
                 shape         = RoundedCornerShape(10.dp),
@@ -110,7 +115,7 @@ fun RegisterScreen(
                     VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(onClick = {  viewModel.onPasswordVisibleToggle() }) {
                         Icon(
                             if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                             contentDescription = null
@@ -124,7 +129,7 @@ fun RegisterScreen(
 
             OutlinedTextField(
                 value         = confirmPassword,
-                onValueChange = { confirmPassword = it },
+                onValueChange = { viewModel.onConfirmPasswordChange(it) },
                 label         = { Text("Confirmar contraseña") },
                 singleLine    = true,
                 shape         = RoundedCornerShape(10.dp),
@@ -136,7 +141,7 @@ fun RegisterScreen(
             Spacer(Modifier.height(28.dp))
 
             Button(
-                onClick  = {},
+                onClick  = { viewModel.onRegisterClick() },
                 shape    = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
