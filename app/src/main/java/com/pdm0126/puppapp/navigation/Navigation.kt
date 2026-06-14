@@ -18,15 +18,24 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.pdm0126.puppapp.data.local.SessionManager
 import com.pdm0126.puppapp.screens.OrdersView.activeOrderView.ActiveOrdersScreen
+import com.pdm0126.puppapp.screens.OrdersView.newOrderView.NewOrderScreen
 import com.pdm0126.puppapp.screens.authorView.loginview.LoginScreen
 import com.pdm0126.puppapp.screens.authorView.registrerView.RegisterScreen
+import com.pdm0126.puppapp.screens.menuView.MenuScreen
 
 @Composable
 fun PupappNavigation(sessionManager: SessionManager) {
-    //Forzamiento (Eliminar despues)
     val backStack: NavBackStack<NavKey> = rememberNavBackStack(
         if (sessionManager.isLoggedIn) Route.Orders as NavKey else Route.Login as NavKey
     )
+
+    fun handleTabSelection(index: Int) {
+        when (index) {
+            0 -> { backStack.clear(); backStack.add(Route.Orders) }
+            1 -> { backStack.clear(); backStack.add(Route.NewOrder) }
+            2 -> { backStack.clear(); backStack.add(Route.Menu) }
+        }
+    }
 
     val entryProvider = remember {
         entryProvider<NavKey> {
@@ -50,15 +59,21 @@ fun PupappNavigation(sessionManager: SessionManager) {
             }
             entry<Route.Orders> {
                 ActiveOrdersScreen(
-                    onNewOrder = {
-                        // Navegar a creación de orden si tienes esa ruta
-                    },
-                    onSelectTab = { _ ->
-                        // Manejar cambio de tab si es necesario
-                    },
+                    onNewOrder = { backStack.add(Route.NewOrder) },
+                    onSelectTab = { handleTabSelection(it) },
                     onLogout = {
                         sessionManager.clearSession()
                     }
+                )
+            }
+            entry<Route.NewOrder> {
+//                NewOrderScreen(
+//                    onSelectTab = { handleTabSelection(it) }
+//                )
+            }
+            entry<Route.Menu> {
+                MenuScreen(
+                    onSelectTab = { handleTabSelection(it) }
                 )
             }
         }
@@ -70,7 +85,6 @@ fun PupappNavigation(sessionManager: SessionManager) {
         entryProvider = entryProvider
     )
 
-    // Manejo de token (si expira el refesh vuelve al login)
     val isLoggedIn = sessionManager.isLoggedIn
     LaunchedEffect(isLoggedIn) {
         if (!isLoggedIn) {
@@ -81,8 +95,8 @@ fun PupappNavigation(sessionManager: SessionManager) {
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         NavDisplay(
-            entries = entries,
-            onBack = { if (backStack.size > 1) backStack.removeAt(backStack.size - 1) },
+            entries  = entries,
+            onBack   = { if (backStack.size > 1) backStack.removeAt(backStack.size - 1) },
             modifier = Modifier.fillMaxSize().padding(innerPadding)
         )
     }
