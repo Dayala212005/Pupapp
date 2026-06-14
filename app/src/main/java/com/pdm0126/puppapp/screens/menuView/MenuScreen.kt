@@ -3,49 +3,54 @@ package com.pdm0126.puppapp.screens.menuView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pdm0126.puppapp.components.PupappBottomNav
-import com.pdm0126.puppapp.ui.Green40
-import com.pdm0126.puppapp.ui.Purple60
+import com.pdm0126.puppapp.data.model.Product
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import coil3.compose.AsyncImage
 
-
-// ── Data ────────────────────────────────────────────────────────────────────
-
-data class MenuItem(val name: String, val price: Double, val isPredefined: Boolean)
-
-private val menuData = mapOf(
-    "Pupusas" to listOf(
-        MenuItem("Pupusa de queso",   1.00, isPredefined = true),
-        MenuItem("Pupusa revuelta",   1.25, isPredefined = false),
-        MenuItem("Pupusa de frijol",  1.00, isPredefined = true),
-        MenuItem("Pupusa de loroco",  1.25, isPredefined = false),
-    ),
-    "Bebidas" to listOf(
-        MenuItem("Fresco de tamarindo", 0.75, isPredefined = false),
-        MenuItem("Fresco de horchata",  0.75, isPredefined = false),
-        MenuItem("Agua pura",           0.50, isPredefined = true),
-    )
-)
-
-// ── Screen ──────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MenuScreen(onSelectTab: (Int) -> Unit = {}) {
+fun MenuScreen(
+    onSelectTab: (Int) -> Unit = {},
+    viewModel: MenuViewModel = viewModel()
+) {
+    val products     by viewModel.products.collectAsState()
+    val isLoading    by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val showDialog   by viewModel.showDialog.collectAsState()
+
+    // Agrupar productos por categoría
+    val groupedProducts = products.groupBy { it.category ?: "Sin categoría" }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -58,30 +63,69 @@ fun MenuScreen(onSelectTab: (Int) -> Unit = {}) {
         },
         bottomBar = {
             PupappBottomNav(selectedIndex = 2, onItemSelected = onSelectTab)
+        },
+                floatingActionButton = {
+            FloatingActionButton(
+                onClick = { viewModel.openCreateDialog("") }
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Agregar producto")
+            }
         }
     ) { innerPadding ->
-        LazyColumn(
-            contentPadding = PaddingValues(
-                start  = 16.dp,
-                end    = 16.dp,
-                top    = innerPadding.calculateTopPadding() + 16.dp,
-                bottom = innerPadding.calculateBottomPadding() + 16.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-            menuData.forEach { (category, items) ->
-                item {
-                    CategoryHeader(category)
-                    Spacer(Modifier.height(8.dp))
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            when {
+                isLoading && products.isEmpty() -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-                items.forEach { item ->
-                    item {
-                        MenuItemRow(item)
-                        Spacer(Modifier.height(6.dp))
+                errorMessage != null && products.isEmpty() -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(errorMessage ?: "", color = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.height(8.dp))
+                        Button(onClick = { viewModel.loadProducts() }) {
+                            Text("Reintentar")
+                        }
                     }
                 }
-                item { Spacer(Modifier.height(16.dp)) }
+                else -> {
+                    LazyColumn(
+                        contentPadding = PaddingValues(
+                            start  = 16.dp,
+                            end    = 16.dp,
+                            top    = innerPadding.calculateTopPadding() + 16.dp,
+                            bottom = innerPadding.calculateBottomPadding() + 16.dp
+                        )
+                    ) {
+                        groupedProducts.forEach { (category, items) ->
+                            item {
+                                CategoryHeader(
+                                    title    = category,
+                                    onAdd    = { viewModel.openCreateDialog(category) }
+                                )
+                                Spacer(Modifier.height(8.dp))
+                            }
+                            items.forEach { product ->
+                                item {
+                                    MenuItemRow(
+                                        product  = product,
+                                        onEdit   = { viewModel.openEditDialog(product) },
+                                        onDelete = { viewModel.onDeleteClick(product.id) }
+                                    )
+                                    Spacer(Modifier.height(6.dp))
+                                }
+                            }
+                            item { Spacer(Modifier.height(16.dp)) }
+                        }
+                    }
+                }
             }
+        }
+
+        if (showDialog) {
+            ProductDialog(viewModel = viewModel)
         }
     }
 }
@@ -89,15 +133,15 @@ fun MenuScreen(onSelectTab: (Int) -> Unit = {}) {
 // ── Category header ──────────────────────────────────────────────────────────
 
 @Composable
-private fun CategoryHeader(title: String) {
+private fun CategoryHeader(title: String, onAdd: () -> Unit) {
     Row(
-        verticalAlignment   = Alignment.CenterVertically,
+        verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier.fillMaxWidth()
+        modifier              = Modifier.fillMaxWidth()
     ) {
         Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         TextButton(
-            onClick  = {},
+            onClick        = onAdd,
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
         ) {
             Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -108,48 +152,55 @@ private fun CategoryHeader(title: String) {
 }
 
 // ── Menu item row ────────────────────────────────────────────────────────────
-
 @Composable
-private fun MenuItemRow(item: MenuItem) {
-    val dotColor = if (item.isPredefined) Purple60 else Green40
-
+private fun MenuItemRow(
+    product: Product,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     Card(
-        shape  = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape    = RoundedCornerShape(10.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border   = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            verticalAlignment   = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+            verticalAlignment = Alignment.CenterVertically,
+            modifier          = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
-            // Colored dot indicator
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(dotColor)
+            // Imagen del producto
+            AsyncImage(
+                model         = product.imageUrl,
+                contentDescription = product.name,
+                contentScale  = ContentScale.Crop,
+                modifier      = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                error         = painterResource(id = android.R.drawable.ic_menu_gallery),
+                placeholder   = painterResource(id = android.R.drawable.ic_menu_gallery)
             )
+
             Spacer(Modifier.width(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(item.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(product.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    text     = if (item.isPredefined) "Predefinido" else "Personalizado",
+                    text     = product.category ?: "Sin categoría",
                     fontSize = 11.sp,
                     color    = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Text(
-                text       = "\$%.2f".format(item.price),
+                text       = "\$%.2f".format(product.priceBase),
                 fontSize   = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color      = MaterialTheme.colorScheme.primary,
                 modifier   = Modifier.padding(end = 8.dp)
             )
 
-            IconButton(onClick = {}, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector        = Icons.Outlined.Edit,
                     contentDescription = "Editar",
@@ -157,7 +208,7 @@ private fun MenuItemRow(item: MenuItem) {
                     tint               = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            IconButton(onClick = {}, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector        = Icons.Outlined.Delete,
                     contentDescription = "Eliminar",
@@ -167,6 +218,109 @@ private fun MenuItemRow(item: MenuItem) {
             }
         }
     }
+}
+
+// ── Product dialog ────────────────────────────────────────────────────────────
+@Composable
+private fun ProductDialog(viewModel: MenuViewModel) {
+    val name           by viewModel.name.collectAsState()
+    val priceBase      by viewModel.priceBase.collectAsState()
+    val category       by viewModel.category.collectAsState()
+    val editingProduct by viewModel.editingProduct.collectAsState()
+    val isLoading      by viewModel.isLoading.collectAsState()
+
+    val context = LocalContext.current
+
+    // Launcher para abrir la galería
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let {
+            val bytes = context.contentResolver.openInputStream(it)?.readBytes()
+            val fileName = it.lastPathSegment ?: "image.jpg"
+            if (bytes != null) {
+                viewModel.onImageSelected(bytes, fileName)
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = { viewModel.closeDialog() },
+        title = {
+            Text(if (editingProduct == null) "Agregar producto" else "Editar producto")
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value         = name,
+                    onValueChange = { viewModel.onNameChange(it) },
+                    label         = { Text("Nombre") },
+                    singleLine    = true,
+                    modifier      = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value         = priceBase,
+                    onValueChange = { viewModel.onPriceBaseChange(it) },
+                    label         = { Text("Precio base") },
+                    singleLine    = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier      = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value         = category,
+                    onValueChange = { viewModel.onCategoryChange(it) },
+                    label         = { Text("Categoría") },
+                    singleLine    = true,
+                    modifier      = Modifier.fillMaxWidth()
+                )
+
+                // Botón para seleccionar imagen
+                OutlinedButton(
+                    onClick  = {
+                        imagePicker.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Seleccionar imagen")
+                }
+
+                // Preview de la imagen seleccionada
+                val imageBytes by viewModel.imageBytes.collectAsState()
+                if (imageBytes != null) {
+                    val bitmap = remember(imageBytes) {
+                        BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes!!.size)
+                    }
+                    Image(
+                        bitmap      = bitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier    = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { viewModel.onSaveClick() },
+                enabled = !isLoading
+            ) {
+                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                else Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { viewModel.closeDialog() }) {
+                Text("Cancelar")
+            }
+        }
+    )
 }
 
 @Preview

@@ -13,4 +13,10 @@ sealed interface Route : NavKey {
     
     @Serializable
     data object Orders : Route
+
+    @Serializable
+    data object NewOrder : Route
+
+    @Serializable
+    data object Menu : Route
 }
