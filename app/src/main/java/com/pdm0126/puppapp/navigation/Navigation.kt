@@ -67,9 +67,12 @@ fun PupappNavigation(sessionManager: SessionManager) {
                 )
             }
             entry<Route.NewOrder> {
-//                NewOrderScreen(
-//                    onSelectTab = { handleTabSelection(it) }
-//                )
+                NewOrderScreen(
+                    onNavigateBack = {
+                        backStack.clear()
+                        backStack.add(Route.Orders)
+                    }
+                )
             }
             entry<Route.Menu> {
                 MenuScreen(

@@ -14,6 +14,9 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -22,7 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pdm0126.puppapp.components.OrderCard
+import com.pdm0126.puppapp.components.OrderPreview
 import com.pdm0126.puppapp.components.OrderStatus
+import com.pdm0126.puppapp.components.OrderStatusBottomSheet
 import com.pdm0126.puppapp.components.PupappBottomNav
 
 
@@ -35,6 +40,7 @@ fun ActiveOrdersScreen(
     onLogout:      () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var selectedOrder by remember { mutableStateOf<OrderPreview?>(null) }
 
     Scaffold(
         topBar = {
@@ -170,11 +176,24 @@ fun ActiveOrdersScreen(
                 }
             } else {
                 items(uiState.orders) { order ->
-                    OrderCard(order = order)
+                    OrderCard(
+                        order   = order,
+                        onClick = { selectedOrder = order }
+                    )
                 }
             }
         }
     }
+        selectedOrder?.let { order ->
+            OrderStatusBottomSheet(
+                order    = order,
+                onDismiss = { selectedOrder = null },
+                onStatusChange = { newStatusId ->
+                    viewModel.updateOrderStatus(order.id, newStatusId)
+                    selectedOrder = null
+                }
+            )
+        }
 }
 
 @Composable
