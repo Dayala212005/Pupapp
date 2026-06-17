@@ -297,3 +297,65 @@ fun ImagePickerField(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OrderStatusBottomSheet(
+    order: OrderPreview,
+    onDismiss: () -> Unit,
+    onStatusChange: (Int) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState       = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text       = "Orden #${order.id}",
+                fontWeight = FontWeight.SemiBold,
+                fontSize   = 16.sp
+            )
+            Text(
+                text     = order.clientName ?: "Consumidor Final",
+                fontSize = 13.sp,
+                color    = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(Modifier.height(20.dp))
+            Text(
+                text       = "Cambiar estado",
+                fontWeight = FontWeight.Medium,
+                fontSize   = 14.sp
+            )
+            Spacer(Modifier.height(12.dp))
+
+            // Botones de estado
+            listOf(
+                1 to "Pendiente",
+                2 to "Preparando",
+                3 to "Listo",
+                4 to "Entregado",
+                5 to "Cancelado"
+            ).forEach { (statusId, label) ->
+                val isCurrentStatus = order.statusId == statusId
+                OutlinedButton(
+                    onClick  = { if (!isCurrentStatus) onStatusChange(statusId) },
+                    enabled  = !isCurrentStatus,
+                    shape    = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(label)
+                }
+            }
+        }
+    }
+}

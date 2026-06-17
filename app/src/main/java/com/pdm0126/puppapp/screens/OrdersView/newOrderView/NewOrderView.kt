@@ -15,28 +15,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-data class MenuItemUi(val name: String, val price: Double, var quantity: Int = 0)
-
-private val sampleMenuItems = mapOf(
-    "Pupusas" to listOf(
-        MenuItemUi("Pupusa de queso",   1.00, 2),
-        MenuItemUi("Pupusa revuelta",   1.25, 1),
-        MenuItemUi("Pupusa de frijol",  1.00),
-        MenuItemUi("Pupusa de loroco",  1.25),
-    ),
-    "Bebidas" to listOf(
-        MenuItemUi("Fresco de tamarindo", 0.75),
-        MenuItemUi("Fresco de horchata",  0.75),
-        MenuItemUi("Agua pura",           0.50),
-    )
-)
-
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pdm0126.puppapp.data.model.Product
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewOrderScreen(onNavigateBack: () -> Unit = {}) {
-    var clientName by remember { mutableStateOf("") }
+fun NewOrderScreen(
+    onNavigateBack: () -> Unit = {},
+    onSelectTab: (Int) -> Unit = {},
+    viewModel: NewOrderViewModel = viewModel()
+) {
+    val customerName    by viewModel.customerName.collectAsState()
+    val groupedProducts by viewModel.groupedProducts.collectAsState()
+    val quantities      by viewModel.quantities.collectAsState()
+    val selectedItems   by viewModel.selectedItems.collectAsState()
+    val total           by viewModel.total.collectAsState()
+    val isLoading       by viewModel.isLoading.collectAsState()
+    val errorMessage    by viewModel.errorMessage.collectAsState()
+    val orderSuccess    by viewModel.orderSuccess.collectAsState()
+
+    // Navegar de vuelta cuando la orden se crea exitosamente
+    LaunchedEffect(orderSuccess) {
+        if (orderSuccess) {
+            viewModel.resetOrderSuccess()
+            onNavigateBack()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -58,65 +62,112 @@ fun NewOrderScreen(onNavigateBack: () -> Unit = {}) {
             )
         }
     ) { innerPadding ->
-        LazyColumn(
-            contentPadding = PaddingValues(
-                start  = 16.dp,
-                end    = 16.dp,
-                top    = innerPadding.calculateTopPadding() + 12.dp,
-                bottom = 32.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-            // Client name field
-            item {
-                OutlinedTextField(
-                    value         = clientName,
-                    onValueChange = { clientName = it },
-                    label         = { Text("Nombre del cliente") },
-                    placeholder   = { Text("Opcional") },
-                    singleLine    = true,
-                    shape         = RoundedCornerShape(10.dp),
-                    modifier      = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(20.dp))
-                SectionHeader("Seleccionar productos")
-                Spacer(Modifier.height(8.dp))
-            }
-
-            // Product categories
-            sampleMenuItems.forEach { (category, items) ->
-                item {
-                    Text(
-                        text       = category,
-                        fontSize   = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color      = MaterialTheme.colorScheme.primary,
-                        modifier   = Modifier.padding(bottom = 6.dp)
-                    )
+        Box(modifier = Modifier.fillMaxSize()) {
+            when {
+                isLoading && groupedProducts.isEmpty() -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-                items.forEach { product ->
-                    item {
-                        ProductRow(product)
-                        Spacer(Modifier.height(6.dp))
+                errorMessage != null && groupedProducts.isEmpty() -> {
+                    Column(
+                        modifier            = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(errorMessage ?: "", color = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.height(8.dp))
+                        Button(onClick = { viewModel.loadProducts() }) {
+                            Text("Reintentar")
+                        }
                     }
                 }
-                item { Spacer(Modifier.height(10.dp)) }
-            }
+                else -> {
+                    LazyColumn(
+                        contentPadding = PaddingValues(
+                            start  = 16.dp,
+                            end    = 16.dp,
+                            top    = innerPadding.calculateTopPadding() + 12.dp,
+                            bottom = 32.dp
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        // Campo nombre cliente
+                        item {
+                            OutlinedTextField(
+                                value         = customerName,
+                                onValueChange = { viewModel.onCustomerNameChange(it) },
+                                label         = { Text("Nombre del cliente") },
+                                placeholder   = { Text("Opcional") },
+                                singleLine    = true,
+                                shape         = RoundedCornerShape(10.dp),
+                                modifier      = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(20.dp))
+                            SectionHeader("Seleccionar productos")
+                            Spacer(Modifier.height(8.dp))
+                        }
 
-            // Order summary
-            item {
-                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                Spacer(Modifier.height(12.dp))
-                OrderSummaryCard()
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick  = {},
-                    shape    = RoundedCornerShape(10.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                ) {
-                    Text("Registrar orden", fontWeight = FontWeight.Medium)
+                        // Productos agrupados por categoría
+                        groupedProducts.forEach { (category, items) ->
+                            item {
+                                Text(
+                                    text       = category,
+                                    fontSize   = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color      = MaterialTheme.colorScheme.primary,
+                                    modifier   = Modifier.padding(bottom = 6.dp)
+                                )
+                            }
+                            items.forEach { product ->
+                                item {
+                                    ProductRow(
+                                        product  = product,
+                                        quantity = quantities[product.id] ?: 0,
+                                        onIncrease = { viewModel.onIncrease(product.id) },
+                                        onDecrease = { viewModel.onDecrease(product.id) }
+                                    )
+                                    Spacer(Modifier.height(6.dp))
+                                }
+                            }
+                            item { Spacer(Modifier.height(10.dp)) }
+                        }
+
+                        // Resumen y botón solo si hay items seleccionados
+                        if (selectedItems.isNotEmpty()) {
+                            item {
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color     = MaterialTheme.colorScheme.outlineVariant
+                                )
+                                Spacer(Modifier.height(12.dp))
+                                OrderSummaryCard(
+                                    selectedItems = selectedItems,
+                                    total         = total
+                                )
+                                Spacer(Modifier.height(16.dp))
+
+                                // Error message
+                                errorMessage?.let {
+                                    Text(
+                                        text     = it,
+                                        color    = MaterialTheme.colorScheme.error,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                }
+
+                                Button(
+                                    onClick  = { viewModel.onCreateOrderClick() },
+                                    enabled  = !isLoading,
+                                    shape    = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp)
+                                ) {
+                                    if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                                    else Text("Registrar orden", fontWeight = FontWeight.Medium)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -124,36 +175,58 @@ fun NewOrderScreen(onNavigateBack: () -> Unit = {}) {
 }
 
 @Composable
-private fun ProductRow(item: MenuItemUi) {
+private fun ProductRow(
+    product: Product,
+    quantity: Int,
+    onIncrease: () -> Unit,
+    onDecrease: () -> Unit
+) {
     Card(
-        shape  = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape    = RoundedCornerShape(10.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border   = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            verticalAlignment   = Alignment.CenterVertically,
+            verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+            modifier              = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(item.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(product.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    text  = "\$%.2f".format(item.price),
+                    text     = "\$%.2f".format(product.priceBase),
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary
+                    color    = MaterialTheme.colorScheme.primary
                 )
             }
-            //QuantityControl(quantity = item.quantity)
+            if (quantity == 0) {
+                FilledTonalButton(
+                    onClick        = onIncrease,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    modifier       = Modifier.height(32.dp)
+                ) {
+                    Text("Agregar", fontSize = 12.sp)
+                }
+            } else {
+                QuantityControl(
+                    quantity   = quantity,
+                    onIncrease = onIncrease,
+                    onDecrease = onDecrease
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun OrderSummaryCard() {
+private fun OrderSummaryCard(
+    selectedItems: List<Pair<Product, Int>>,
+    total: Double
+) {
     Card(
-        shape  = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape    = RoundedCornerShape(12.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(14.dp)) {
@@ -163,18 +236,22 @@ private fun OrderSummaryCard() {
                 fontSize   = 13.sp,
                 modifier   = Modifier.padding(bottom = 8.dp)
             )
-            SummaryRow("Pupusa de queso × 2", "$2.00")
-            SummaryRow("Pupusa revuelta × 1",  "$1.25")
+            selectedItems.forEach { (product, qty) ->
+                SummaryRow(
+                    label  = "${product.name} × $qty",
+                    amount = "\$%.2f".format(product.priceBase * qty)
+                )
+            }
             Spacer(Modifier.height(6.dp))
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
             Spacer(Modifier.height(6.dp))
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
+                modifier              = Modifier.fillMaxWidth()
             ) {
                 Text("Total", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text       = "$3.25",
+                    text       = "\$%.2f".format(total),
                     fontSize   = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color      = MaterialTheme.colorScheme.primary
@@ -188,7 +265,7 @@ private fun OrderSummaryCard() {
 private fun SummaryRow(label: String, amount: String) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier
+        modifier              = Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp)
     ) {

@@ -3,6 +3,7 @@ package com.pdm0126.puppapp.screens.OrdersView.activeOrderView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pdm0126.puppapp.components.OrderPreview
+import com.pdm0126.puppapp.data.dto.UpdateOrderStatusRequest
 import com.pdm0126.puppapp.data.model.Order
 import com.pdm0126.puppapp.data.remote.PupappAPI.OrdersAPI
 import com.pdm0126.puppapp.data.repositories.OrdersAPIImpl
@@ -73,5 +74,18 @@ class ActiveOrdersViewModel(
             total = finalTotal,
             statusId = statusId
         )
+    }
+
+    fun updateOrderStatus(orderId: Int, statusId: Int) {
+        viewModelScope.launch {
+            try {
+                ordersAPI.updateOrderStatus(orderId, UpdateOrderStatusRequest(statusId))
+                fetchOrders()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Error al actualizar estado: ${e.localizedMessage ?: "Error desconocido"}"
+                )
+            }
+        }
     }
 }
