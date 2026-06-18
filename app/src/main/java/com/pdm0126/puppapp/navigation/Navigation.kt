@@ -21,6 +21,7 @@ import com.pdm0126.puppapp.screens.OrdersView.activeOrderView.ActiveOrdersScreen
 import com.pdm0126.puppapp.screens.OrdersView.newOrderView.NewOrderScreen
 import com.pdm0126.puppapp.screens.authorView.loginview.LoginScreen
 import com.pdm0126.puppapp.screens.authorView.registrerView.RegisterScreen
+import com.pdm0126.puppapp.screens.historyView.HistoryScreen
 import com.pdm0126.puppapp.screens.menuView.MenuScreen
 
 @Composable
@@ -34,6 +35,7 @@ fun PupappNavigation(sessionManager: SessionManager) {
             0 -> { backStack.clear(); backStack.add(Route.Orders) }
             1 -> { backStack.clear(); backStack.add(Route.NewOrder) }
             2 -> { backStack.clear(); backStack.add(Route.Menu) }
+            3 -> { backStack.clear(); backStack.add(Route.History) }
         }
     }
 
@@ -76,6 +78,11 @@ fun PupappNavigation(sessionManager: SessionManager) {
             }
             entry<Route.Menu> {
                 MenuScreen(
+                    onSelectTab = { handleTabSelection(it) }
+                )
+            }
+            entry<Route.History> {
+                HistoryScreen(
                     onSelectTab = { handleTabSelection(it) }
                 )
             }

@@ -8,6 +8,8 @@ interface OrdersAPI {
     suspend fun getOrders(page: Int = 1, limit: Int = 10): List<Order>
     suspend fun getActiveOrders(): List<Order>
     suspend fun getOrderById(id: Int): Order
+
+    suspend fun getDeliveredOrdersByPeriod(startDate: String, endDate: String): List<Order>
     suspend fun createOrder(request: CreateOrderRequest): Order
     suspend fun updateOrderStatus(id: Int, request: UpdateOrderStatusRequest): Order
     suspend fun deleteOrder(id: Int)
