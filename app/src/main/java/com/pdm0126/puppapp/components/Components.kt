@@ -1,11 +1,6 @@
 package com.pdm0126.puppapp.components
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,11 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.pdm0126.puppapp.ui.Amber40
 import com.pdm0126.puppapp.ui.Green40
 import com.pdm0126.puppapp.ui.Red40
@@ -94,14 +87,16 @@ data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: I
 
 val bottomNavItems = listOf(
     NavItem("Órdenes", Icons.Outlined.List, Icons.Filled.List),
-    NavItem("Nueva", Icons.Outlined.AddCircle, Icons.Filled.AddCircle),
     NavItem("Menú", Icons.Outlined.Restaurant, Icons.Filled.Restaurant),
     NavItem("Historial", Icons.Outlined.History, Icons.Filled.History),
 )
 
 @Composable
 fun PupappBottomNav(selectedIndex: Int, onItemSelected: (Int) -> Unit = {}) {
-    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+    NavigationBar(
+        containerColor = Color.Transparent,
+        tonalElevation = 0.dp
+    ) {
         bottomNavItems.forEachIndexed { index, item ->
             NavigationBarItem(
                 selected = selectedIndex == index,
@@ -222,76 +217,62 @@ fun OrderCard(order: OrderPreview, modifier: Modifier = Modifier, onClick: () ->
     }
 }
 
-// ─── Image picker field ─────────────────────────────────────────────────────
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ImagePickerField(
-    selectedUri: Uri?,
-    onImageSelected: (Uri?) -> Unit,
-    modifier: Modifier = Modifier
+fun OrderStatusBottomSheet(
+    order: OrderPreview,
+    onDismiss: () -> Unit,
+    onStatusChange: (Int) -> Unit
 ) {
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        onImageSelected(uri)
-    }
+    val sheetState = rememberModalBottomSheetState()
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(160.dp)
-            .clickable {
-                launcher.launch(
-                    PickVisualMediaRequest(
-                        ActivityResultContracts.PickVisualMedia.ImageOnly
-                    )
-                )
-            },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState       = sheetState
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            if (selectedUri != null) {
-                AsyncImage(
-                    model = selectedUri,
-                    contentDescription = "Selected image",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-                // Botón flotante para editar si ya hay imagen
-                Box(Modifier
-                    .fillMaxSize()
-                    .padding(8.dp), contentAlignment = Alignment.BottomEnd) {
-                    FilledTonalIconButton(
-                        onClick = {
-                            launcher.launch(
-                                PickVisualMediaRequest(
-                                    ActivityResultContracts.PickVisualMedia.ImageOnly
-                                )
-                            )
-                        },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Editar", modifier = Modifier.size(16.dp))
-                    }
-                }
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Outlined.AddPhotoAlternate,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Subir imagen del producto",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text       = "Orden #${order.id}",
+                fontWeight = FontWeight.SemiBold,
+                fontSize   = 16.sp
+            )
+            Text(
+                text     = order.clientName ?: "Consumidor Final",
+                fontSize = 13.sp,
+                color    = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(Modifier.height(20.dp))
+            Text(
+                text       = "Cambiar estado",
+                fontWeight = FontWeight.Medium,
+                fontSize   = 14.sp
+            )
+            Spacer(Modifier.height(12.dp))
+
+            // Botones de estado
+            listOf(
+                1 to "Pendiente",
+                2 to "Preparando",
+                3 to "Listo",
+                4 to "Entregado",
+                5 to "Cancelado"
+            ).forEach { (statusId, label) ->
+                val isCurrentStatus = order.statusId == statusId
+                OutlinedButton(
+                    onClick  = { if (!isCurrentStatus) onStatusChange(statusId) },
+                    enabled  = !isCurrentStatus,
+                    shape    = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(label)
                 }
             }
         }

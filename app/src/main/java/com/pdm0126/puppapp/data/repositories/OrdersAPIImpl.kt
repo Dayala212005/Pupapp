@@ -38,6 +38,14 @@ class OrdersAPIImpl : OrdersAPI {
         return response.toModel()
     }
 
+    override suspend fun getDeliveredOrdersByPeriod(startDate: String, endDate: String): List<Order> {
+        val response: List<OrderDTO> = client.get("/api/orders/delivered") {
+            parameter("startDate", startDate)
+            parameter("endDate", endDate)
+        }.body()
+        return response.map { it.toModel() }
+    }
+
     override suspend fun createOrder(request: CreateOrderRequest): Order {
         val response: OrderDTO = client.post("/api/orders") {
             contentType(ContentType.Application.Json)

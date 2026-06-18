@@ -19,4 +19,7 @@ sealed interface Route : NavKey {
 
     @Serializable
     data object Menu : Route
+
+    @Serializable
+    data object History : Route
 }

@@ -1,46 +1,40 @@
 package com.pdm0126.puppapp.screens.menuView
 
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pdm0126.puppapp.components.PupappBottomNav
-import com.pdm0126.puppapp.data.model.Product
-import android.graphics.BitmapFactory
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.Image
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import coil3.compose.AsyncImage
+import com.pdm0126.puppapp.data.model.Product
 
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MenuScreen(
-    onSelectTab: (Int) -> Unit = {},
+    padding: PaddingValues = PaddingValues(),
     viewModel: MenuViewModel = viewModel()
 ) {
     val products     by viewModel.products.collectAsState()
@@ -51,77 +45,69 @@ fun MenuScreen(
     // Agrupar productos por categoría
     val groupedProducts = products.groupBy { it.category ?: "Sin categoría" }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Gestión de menú", fontWeight = FontWeight.SemiBold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor    = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        },
-        bottomBar = {
-            PupappBottomNav(selectedIndex = 2, onItemSelected = onSelectTab)
-        },
-                floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.openCreateDialog("") }
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Agregar producto")
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+    ) {
+        when {
+            isLoading && products.isEmpty() -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            }
+            errorMessage != null && products.isEmpty() -> {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(errorMessage ?: "", color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = { viewModel.loadProducts() }) {
+                        Text("Reintentar")
+                    }
+                }
+            }
+            else -> {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    groupedProducts.forEach { (category, items) ->
+                        item {
+                            CategoryHeader(
+                                title    = category,
+                                onAdd    = { viewModel.openCreateDialog(category) }
+                            )
+                            Spacer(Modifier.height(8.dp))
+                        }
+                        items.forEach { product ->
+                            item {
+                                MenuItemRow(
+                                    product  = product,
+                                    onEdit   = { viewModel.openEditDialog(product) },
+                                    onDelete = { viewModel.onDeleteClick(product.id) }
+                                )
+                                Spacer(Modifier.height(6.dp))
+                            }
+                        }
+                        item { Spacer(Modifier.height(16.dp)) }
+                    }
+                }
             }
         }
-    ) { innerPadding ->
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            when {
-                isLoading && products.isEmpty() -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-                errorMessage != null && products.isEmpty() -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(errorMessage ?: "", color = MaterialTheme.colorScheme.error)
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = { viewModel.loadProducts() }) {
-                            Text("Reintentar")
-                        }
-                    }
-                }
-                else -> {
-                    LazyColumn(
-                        contentPadding = PaddingValues(
-                            start  = 16.dp,
-                            end    = 16.dp,
-                            top    = innerPadding.calculateTopPadding() + 16.dp,
-                            bottom = innerPadding.calculateBottomPadding() + 16.dp
-                        )
-                    ) {
-                        groupedProducts.forEach { (category, items) ->
-                            item {
-                                CategoryHeader(
-                                    title    = category,
-                                    onAdd    = { viewModel.openCreateDialog(category) }
-                                )
-                                Spacer(Modifier.height(8.dp))
-                            }
-                            items.forEach { product ->
-                                item {
-                                    MenuItemRow(
-                                        product  = product,
-                                        onEdit   = { viewModel.openEditDialog(product) },
-                                        onDelete = { viewModel.onDeleteClick(product.id) }
-                                    )
-                                    Spacer(Modifier.height(6.dp))
-                                }
-                            }
-                            item { Spacer(Modifier.height(16.dp)) }
-                        }
-                    }
-                }
-            }
+        FloatingActionButton(
+            onClick = { viewModel.openCreateDialog("") },
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+                .size(64.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add, 
+                contentDescription = "Agregar producto",
+                modifier = Modifier.size(28.dp)
+            )
         }
 
         if (showDialog) {
@@ -193,7 +179,7 @@ private fun MenuItemRow(
             }
 
             Text(
-                text       = "\$%.2f".format(product.priceBase),
+                text       = "$%.2f".format(product.priceBase),
                 fontSize   = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color      = MaterialTheme.colorScheme.primary,
