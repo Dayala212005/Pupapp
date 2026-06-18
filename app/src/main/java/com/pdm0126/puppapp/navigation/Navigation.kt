@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -17,8 +16,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.pdm0126.puppapp.data.remote.KtorClient
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation3.runtime.NavBackStack
@@ -39,133 +44,155 @@ import com.pdm0126.puppapp.screens.menuView.MenuScreen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PupappNavigation(sessionManager: SessionManager) {
-    val backStack: NavBackStack<NavKey> = rememberNavBackStack(
-        if (sessionManager.isLoggedIn) Route.Orders as NavKey else Route.Login as NavKey
-    )
+    // Se fuerza la recomposicion de todo la navegación y ViewModels cuando cambia el estado de la sesion.
+    key(sessionManager.isLoggedIn) {
+        val backStack: NavBackStack<NavKey> = rememberNavBackStack(
+            if (sessionManager.isLoggedIn) Route.Orders as NavKey else Route.Login as NavKey
+        )
 
-    fun handleTabSelection(index: Int) {
-        when (index) {
-            0 -> {
-                backStack.clear()
-                backStack.add(Route.Orders)
-            }
+        fun handleTabSelection(index: Int) {
+            when (index) {
+                0 -> {
+                    backStack.clear()
+                    backStack.add(Route.Orders)
+                }
 
-            1 -> {
-                backStack.clear()
-                backStack.add(Route.Menu)
-            }
+                1 -> {
+                    backStack.clear()
+                    backStack.add(Route.Menu)
+                }
 
-            2 -> {
-                backStack.clear()
-                backStack.add(Route.History)
+                2 -> {
+                    backStack.clear()
+                    backStack.add(Route.History)
+                }
             }
         }
-    }
 
-    val currentRoute = backStack.lastOrNull()
-    val showBars = currentRoute != null && currentRoute !is Route.Login && currentRoute !is Route.Register
-    val businessName = sessionManager.getBusinessDisplayName() ?: "Mi Negocio"
+        val currentRoute = backStack.lastOrNull()
+        val showBars =
+            currentRoute != null && currentRoute !is Route.Login && currentRoute !is Route.Register
+        val businessName = sessionManager.getBusinessDisplayName() ?: "Mi Negocio"
 
-    val isLoggedIn = sessionManager.isLoggedIn
-    LaunchedEffect(isLoggedIn) {
-        if (!isLoggedIn) {
-            backStack.clear()
-            backStack.add(Route.Login)
-        }
-    }
-
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            if (showBars) {
-                TopAppBar(
-                    title = {
-                        Column(modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 8.dp)) {
-                            Text(
-                                text = "Pupapp",
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 1.sp
-                            )
-                            Text(
-                                text = businessName,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
-                            )
-                        }
-                    },
-                    navigationIcon = {},
-                    actions = {
-                        IconButton(onClick = { sessionManager.clearSession() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Logout,
-                                contentDescription = "Cerrar sesión",
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                if (showBars) {
+                    TopAppBar(
+                        title = {
+                            Column(
+                                modifier = Modifier.padding(
+                                    start = 12.dp,
+                                    top = 8.dp,
+                                    bottom = 8.dp
+                                )
+                            ) {
+                                Text(
+                                    text = "Pupapp",
+                                    fontSize = 26.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 1.sp
+                                )
+                                Text(
+                                    text = businessName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                                )
+                            }
+                        },
+                        navigationIcon = {},
+                        actions = {
+                            IconButton(onClick = {
+                                sessionManager.clearSession()
+                                KtorClient.resetClient()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                                    contentDescription = "Cerrar sesión",
+                                    tint = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            titleContentColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     )
+                }
+            },
+            bottomBar = {
+                if (showBars) {
+                    val selectedIndex = when (currentRoute) {
+                        is Route.Orders -> 0
+                        is Route.Menu -> 1
+                        is Route.History -> 2
+                        else -> 0
+                    }
+                    PupappBottomNav(
+                        selectedIndex = selectedIndex,
+                        onItemSelected = { handleTabSelection(it) })
+                }
+            }
+        ) { innerPadding ->
+            val viewModelStore = remember { ViewModelStore() }
+            val owner = remember(viewModelStore) {
+                object : ViewModelStoreOwner {
+                    override val viewModelStore: ViewModelStore = viewModelStore
+                }
+            }
+            DisposableEffect(viewModelStore) {
+                onDispose { viewModelStore.clear() }
+            }
+
+            CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
+                val entryProvider = remember(innerPadding) {
+                    entryProvider<NavKey> {
+                        entry<Route.Login> {
+                            LoginScreen(
+                                onNavigateToOrders = {
+                                    // Solo navegamos si la sesión se ha iniciado correctamente
+                                    if (sessionManager.isLoggedIn) {
+                                        backStack.clear()
+                                        backStack.add(Route.Orders)
+                                    }
+                                },
+                                onNavigateToRegister = {
+                                    backStack.add(Route.Register)
+                                }
+                            )
+                        }
+                        entry<Route.Register> {
+                            RegisterScreen(
+                                onNavigateBack = {
+                                    backStack.removeLastOrNull()
+                                }
+                            )
+                        }
+                        entry<Route.Orders> {
+                            ActiveOrdersScreen(padding = innerPadding)
+                        }
+                        entry<Route.Menu> {
+                            MenuScreen(padding = innerPadding)
+                        }
+                        entry<Route.History> {
+                            HistoryScreen(padding = innerPadding)
+                        }
+                    }
+                }
+
+                val entries = rememberDecoratedNavEntries(
+                    backStack = backStack,
+                    entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator()),
+                    entryProvider = entryProvider
+                )
+
+                NavDisplay(
+                    entries = entries,
+                    onBack = { if (backStack.size > 1) backStack.removeAt(backStack.size - 1) },
+                    modifier = Modifier.fillMaxSize()
                 )
             }
-        },
-        bottomBar = {
-            if (showBars) {
-                val selectedIndex = when (currentRoute) {
-                    is Route.Orders -> 0
-                    is Route.Menu -> 1
-                    is Route.History -> 2
-                    else -> 0
-                }
-                PupappBottomNav(selectedIndex = selectedIndex, onItemSelected = { handleTabSelection(it) })
-            }
         }
-    ) { innerPadding ->
-        val entryProvider = remember(innerPadding) {
-            entryProvider<NavKey> {
-                entry<Route.Login> {
-                    LoginScreen(
-                        onNavigateToOrders = {
-                            backStack.clear()
-                            backStack.add(Route.Orders)
-                        },
-                        onNavigateToRegister = {
-                            backStack.add(Route.Register)
-                        }
-                    )
-                }
-                entry<Route.Register> {
-                    RegisterScreen(
-                        onNavigateBack = {
-                            backStack.removeLastOrNull()
-                        }
-                    )
-                }
-                entry<Route.Orders> {
-                    ActiveOrdersScreen(padding = innerPadding)
-                }
-                entry<Route.Menu> {
-                    MenuScreen(padding = innerPadding)
-                }
-                entry<Route.History> {
-                    HistoryScreen(padding = innerPadding)
-                }
-            }
-        }
-
-        val entries = rememberDecoratedNavEntries(
-            backStack = backStack,
-            entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator()),
-            entryProvider = entryProvider
-        )
-
-        NavDisplay(
-            entries = entries,
-            onBack = { if (backStack.size > 1) backStack.removeAt(backStack.size - 1) },
-            modifier = Modifier.fillMaxSize()
-        )
     }
 }

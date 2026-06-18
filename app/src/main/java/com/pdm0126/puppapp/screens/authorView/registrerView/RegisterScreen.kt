@@ -37,6 +37,22 @@ fun RegisterScreen(
     val errorMessage    by viewModel.errorMessage.collectAsState()
     val registerSuccess by viewModel.registerSuccess.collectAsState()
 
+    if (registerSuccess) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Registro exitoso") },
+            text  = { Text("Tu restaurante $businessName, fue registrado exitosamente") },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.resetRegisterState()
+                    onNavigateBack()
+                }) {
+                    Text("Aceptar")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -133,21 +149,49 @@ fun RegisterScreen(
                 label         = { Text("Confirmar contraseña") },
                 singleLine    = true,
                 shape         = RoundedCornerShape(10.dp),
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (passwordVisible)
+                    VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                trailingIcon = {
+                    IconButton(onClick = { viewModel.onPasswordVisibleToggle() }) {
+                        Icon(
+                            if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = null
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             )
+
+            if (errorMessage != null) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = errorMessage!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
 
             Spacer(Modifier.height(28.dp))
 
             Button(
                 onClick  = { viewModel.onRegisterClick() },
+                enabled  = !isLoading,
                 shape    = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
             ) {
-                Text("Crear cuenta", fontWeight = FontWeight.Medium)
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Crear cuenta", fontWeight = FontWeight.Medium)
+                }
             }
 
             Spacer(Modifier.height(12.dp))
@@ -164,10 +208,4 @@ fun RegisterScreen(
             }
         }
     }
-}
-
-@Preview
-@Composable
-fun PreviewRegister() {
-    RegisterScreen ()
 }

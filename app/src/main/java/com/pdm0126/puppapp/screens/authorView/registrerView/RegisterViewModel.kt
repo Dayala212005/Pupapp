@@ -48,6 +48,7 @@ class RegisterViewModel(
     }
 
     fun onRegisterClick() {
+        if (_isLoading.value) return
         android.util.Log.d("RegisterVM", "businessName=${_businessName.value}, sessionName=${_sessionName.value}")
 
         if (_businessName.value.isBlank() || _sessionName.value.isBlank() ||
@@ -69,7 +70,11 @@ class RegisterViewModel(
                 authAPI.register(RegisterRequest( _sessionName.value, _password.value,_businessName.value,),)
                 _registerSuccess.value = true
             } catch (e: Exception) {
-                _errorMessage.value = "Error al registrarse: ${e.localizedMessage ?: "Error desconocido"}"
+                val errorMsg = when (e.message) {
+                    "ALREADY_EXISTS" -> "Ese nombre de acceso ya está ocupado, intenta con uno diferente"
+                    else -> "Error al registrarse: ${e.localizedMessage ?: "Error desconocido"}"
+                }
+                _errorMessage.value = errorMsg
                 android.util.Log.e("RegisterVM", "Error: ${e.localizedMessage}", e)
             } finally {
                 _isLoading.value = false

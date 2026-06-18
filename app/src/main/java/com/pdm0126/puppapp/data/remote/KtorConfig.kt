@@ -26,66 +26,78 @@ object KtorClient {
     const val BASE_URL = "https://pupapp-api.vercel.app"
     lateinit var sessionManager: SessionManager
 
-    val client = HttpClient(OkHttp) {
-        install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                coerceInputValues = true
-            })
+    private var _client: HttpClient? = null
+
+    val client: HttpClient
+        get() = _client ?: synchronized(this) {
+            _client ?: createClient().also { _client = it }
         }
 
-        install(Logging) {
-            level = LogLevel.ALL
-        }
+    fun resetClient() {
+        _client?.close()
+        _client = null
+    }
 
-        install(Auth) {
-            bearer {
-                loadTokens {
-                    val accessToken = sessionManager.getAccessToken()
-                    val refreshToken = sessionManager.getRefreshToken()
-                    if (accessToken != null && refreshToken != null) {
-                        BearerTokens(accessToken, refreshToken)
-                    } else {
-                        null
-                    }
-                }
+    private fun createClient(): HttpClient {
+        return HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json(Json {
+                    ignoreUnknownKeys = true
+                    coerceInputValues = true
+                })
+            }
 
-                refreshTokens {
-                    // El bloque refreshTokens se dispara cuando recibe un 401.
-                    val oldTokens = this.oldTokens
-                    val refreshToken = sessionManager.getRefreshToken() ?: return@refreshTokens null
-                    
-                    try {
-                        val refreshClient = HttpClient(OkHttp) {
-                            install(ContentNegotiation) { 
-                                json(Json { ignoreUnknownKeys = true }) 
-                            }
-                        }
-                        
-                        val response = refreshClient.post("$BASE_URL/api/auth/refresh") {
-                            contentType(ContentType.Application.Json)
-                            setBody(RefreshRequest(refreshToken))
-                        }
+            install(Logging) {
+                level = LogLevel.ALL
+            }
 
-                        if (response.status.value == 200 || response.status.value == 201) {
-                            val body = response.body<RefreshResponse>()
-                            sessionManager.updateTokens(body.accessToken, refreshToken)
-                            BearerTokens(body.accessToken, refreshToken)
+            install(Auth) {
+                bearer {
+                    loadTokens {
+                        val accessToken = sessionManager.getAccessToken()
+                        val refreshToken = sessionManager.getRefreshToken()
+                        if (accessToken != null && refreshToken != null) {
+                            BearerTokens(accessToken, refreshToken)
                         } else {
+                            null
+                        }
+                    }
+
+                    refreshTokens {
+                        val refreshToken = sessionManager.getRefreshToken() ?: return@refreshTokens null
+                        
+                        try {
+                            val refreshClient = HttpClient(OkHttp) {
+                                install(ContentNegotiation) { 
+                                    json(Json { ignoreUnknownKeys = true }) 
+                                }
+                            }
+                            
+                            val response = refreshClient.post("$BASE_URL/api/auth/refresh") {
+                                contentType(ContentType.Application.Json)
+                                setBody(RefreshRequest(refreshToken))
+                            }
+
+                            if (response.status.value == 200 || response.status.value == 201) {
+                                val body = response.body<RefreshResponse>()
+                                sessionManager.updateTokens(body.accessToken, refreshToken)
+                                BearerTokens(body.accessToken, refreshToken)
+                            } else {
+                                sessionManager.clearSession()
+                                null
+                            }
+                        } catch (e: Exception) {
                             sessionManager.clearSession()
                             null
                         }
-                    } catch (e: Exception) {
-                        sessionManager.clearSession()
-                        null
                     }
                 }
             }
-        }
 
-        defaultRequest {
-            url(BASE_URL)
-            header(HttpHeaders.Accept, "application/json")
+            defaultRequest {
+                url(BASE_URL)
+                header(HttpHeaders.Accept, "application/json")
+            }
         }
     }
 }

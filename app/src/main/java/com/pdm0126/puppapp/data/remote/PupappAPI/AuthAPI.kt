@@ -6,6 +6,6 @@ import com.pdm0126.puppapp.data.model.UserSession
 
 interface AuthAPI {
     suspend fun login(request: LoginRequest): UserSession
-    suspend fun register(request: RegisterRequest): UserSession
+    suspend fun register(request: RegisterRequest)
     suspend fun logout()
 }
