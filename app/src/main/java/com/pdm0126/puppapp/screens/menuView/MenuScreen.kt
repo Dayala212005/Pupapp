@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.pdm0126.puppapp.data.model.Product
+import android.graphics.Bitmap
+import java.io.ByteArrayOutputStream
 
 @Composable
 fun MenuScreen(
@@ -214,18 +216,21 @@ private fun ProductDialog(viewModel: MenuViewModel) {
     val category       by viewModel.category.collectAsState()
     val editingProduct by viewModel.editingProduct.collectAsState()
     val isLoading      by viewModel.isLoading.collectAsState()
+    val imageBytes     by viewModel.imageBytes.collectAsState()
 
     val context = LocalContext.current
 
-    // Launcher para abrir la galería
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         uri?.let {
-            val bytes = context.contentResolver.openInputStream(it)?.readBytes()
-            val fileName = it.lastPathSegment ?: "image.jpg"
-            if (bytes != null) {
-                viewModel.onImageSelected(bytes, fileName)
+            val inputStream = context.contentResolver.openInputStream(it)
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+
+            if (originalBitmap != null) {
+                val compressedBytes = compressBitmap(originalBitmap)
+                viewModel.onImageSelected(compressedBytes, "image.jpg")
             }
         }
     }
@@ -260,7 +265,6 @@ private fun ProductDialog(viewModel: MenuViewModel) {
                     modifier      = Modifier.fillMaxWidth()
                 )
 
-                // Botón para seleccionar imagen
                 OutlinedButton(
                     onClick  = {
                         imagePicker.launch(
@@ -275,7 +279,6 @@ private fun ProductDialog(viewModel: MenuViewModel) {
                 }
 
                 // Preview de la imagen seleccionada
-                val imageBytes by viewModel.imageBytes.collectAsState()
                 if (imageBytes != null) {
                     val bitmap = remember(imageBytes) {
                         BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes!!.size)
@@ -307,6 +310,29 @@ private fun ProductDialog(viewModel: MenuViewModel) {
             }
         }
     )
+}
+private fun compressBitmap(bitmap: Bitmap, maxDimension: Int = 800, quality: Int = 80): ByteArray {
+    // Redimensionar si es muy grande
+    val ratio = minOf(
+        maxDimension.toFloat() / bitmap.width,
+        maxDimension.toFloat() / bitmap.height,
+        1f // no agrandar imágenes pequeñas
+    )
+
+    val resizedBitmap = if (ratio < 1f) {
+        Bitmap.createScaledBitmap(
+            bitmap,
+            (bitmap.width * ratio).toInt(),
+            (bitmap.height * ratio).toInt(),
+            true
+        )
+    } else {
+        bitmap
+    }
+
+    val outputStream = ByteArrayOutputStream()
+    resizedBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+    return outputStream.toByteArray()
 }
 
 @Preview
