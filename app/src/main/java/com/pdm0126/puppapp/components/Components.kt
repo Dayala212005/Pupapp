@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pdm0126.puppapp.data.model.OrderItem
 import com.pdm0126.puppapp.ui.Amber40
 import com.pdm0126.puppapp.ui.Green40
 import com.pdm0126.puppapp.ui.Red40
@@ -165,12 +166,15 @@ fun QuantityControl(
 
 data class OrderPreview(
     val id: Int,
+    val orderNumber: Int,
     val reference: String?,
     val clientName: String?,
     val time: String,
     val itemCount: Int,
     val total: Double,
-    val statusId: Int
+    val statusId: Int,
+    val items: List<OrderItem> = emptyList(),
+    val showId: Boolean = false
 )
 
 @Composable
@@ -189,8 +193,14 @@ fun OrderCard(order: OrderPreview, modifier: Modifier = Modifier, onClick: () ->
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                val formattedNumber = order.orderNumber.toString().padStart(4, '0')
+                val headerText = if (order.showId) {
+                    "#$formattedNumber (ID: ${order.id})"
+                } else {
+                    "#$formattedNumber"
+                }
                 Text(
-                    text = "#${order.id}${if (order.reference != null) " - ${order.reference}" else ""}",
+                    text = "$headerText${if (order.reference != null) " - ${order.reference}" else ""}",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurface
@@ -203,6 +213,19 @@ fun OrderCard(order: OrderPreview, modifier: Modifier = Modifier, onClick: () ->
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            
+            if (order.items.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                order.items.forEach { item ->
+                    Text(
+                        text = "• ${item.quantity}x ${item.productName}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+            }
+
             Spacer(Modifier.height(8.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
             Spacer(Modifier.height(6.dp))
@@ -236,8 +259,14 @@ fun OrderStatusBottomSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)
         ) {
+            val formattedNumber = order.orderNumber.toString().padStart(4, '0')
+            val headerText = if (order.showId) {
+                "Orden #$formattedNumber (ID: ${order.id})"
+            } else {
+                "Orden #$formattedNumber"
+            }
             Text(
-                text       = "Orden #${order.id}",
+                text       = headerText,
                 fontWeight = FontWeight.SemiBold,
                 fontSize   = 16.sp
             )

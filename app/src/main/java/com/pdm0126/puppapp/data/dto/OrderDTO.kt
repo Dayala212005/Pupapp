@@ -13,6 +13,7 @@ data class OrderDTO(
     val id: Int,
     @SerialName("restaurant_id") val restaurantId: Int,
     @SerialName("status_id") val statusId: Int, //1: Pendiente 2: Preparado 3:Listo 4:Entregado 5:Cancelado
+    @SerialName("order_number") val orderNumber: Int,
     @SerialName("order_reference") val orderReference: String?,
     @SerialName("customer_name") val customerName: String?,
     @SerialName("calculated_subtotal") val calculatedSubtotal: String? = "0.00",
@@ -38,6 +39,7 @@ fun OrderDTO.toModel(): Order {
         id = id,
         restaurantId = restaurantId,
         statusId = statusId,
+        orderNumber = orderNumber,
         orderReference = orderReference,
         customerName = customerName,
         calculatedSubtotal = calculatedSubtotal?.toDoubleOrNull() ?: 0.0,

@@ -110,7 +110,8 @@ fun AllOrdersList(
         uiState.allOrders.filter {
             it.clientName?.contains(searchQuery, ignoreCase = true) == true ||
                     it.reference?.contains(searchQuery, ignoreCase = true) == true ||
-                    it.id.toString().contains(searchQuery)
+                    it.id.toString().contains(searchQuery) ||
+                    it.orderNumber.toString().contains(searchQuery)
         }
     }
 

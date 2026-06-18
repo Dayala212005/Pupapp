@@ -67,12 +67,15 @@ class ActiveOrdersViewModel(
         val dateFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
         return OrderPreview(
             id = id,
+            orderNumber = orderNumber,
             reference = orderReference,
             clientName = customerName,
             time = createdAt?.let { dateFormat.format(it) } ?: "--:--",
             itemCount = items.sumOf { it.quantity },
             total = finalTotal,
-            statusId = statusId
+            statusId = statusId,
+            items = items,
+            showId = false
         )
     }
 

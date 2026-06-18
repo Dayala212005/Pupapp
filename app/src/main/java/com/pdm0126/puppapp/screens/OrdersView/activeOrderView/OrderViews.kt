@@ -33,7 +33,7 @@ import com.pdm0126.puppapp.screens.OrdersView.newOrderView.NewOrderScreen
 fun ActiveOrdersScreen(
     padding: PaddingValues = PaddingValues(),
     viewModel: ActiveOrdersViewModel = viewModel(),
-    onNewOrder: () -> Unit = {} // This is now handled locally but kept for compatibility if needed
+    onNewOrder: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedOrder by remember { mutableStateOf<OrderPreview?>(null) }
