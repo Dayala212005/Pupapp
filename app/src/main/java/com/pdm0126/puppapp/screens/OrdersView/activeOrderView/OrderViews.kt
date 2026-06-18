@@ -5,12 +5,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,176 +25,162 @@ import com.pdm0126.puppapp.components.OrderCard
 import com.pdm0126.puppapp.components.OrderPreview
 import com.pdm0126.puppapp.components.OrderStatus
 import com.pdm0126.puppapp.components.OrderStatusBottomSheet
-import com.pdm0126.puppapp.components.PupappBottomNav
+import com.pdm0126.puppapp.screens.OrdersView.newOrderView.NewOrderScreen
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActiveOrdersScreen(
+    padding: PaddingValues = PaddingValues(),
     viewModel: ActiveOrdersViewModel = viewModel(),
-    onNewOrder:    () -> Unit = {},
-    onSelectTab:   (Int) -> Unit = {},
-    onLogout:      () -> Unit = {}
+    onNewOrder: () -> Unit = {} // This is now handled locally but kept for compatibility if needed
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedOrder by remember { mutableStateOf<OrderPreview?>(null) }
+    var showNewOrderSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Pupapp", fontWeight = FontWeight.SemiBold)
-                        Text(
-                            text  = "Pupusería El Comal",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onLogout) {
-                        Icon(
-                            imageVector        = Icons.AutoMirrored.Filled.Logout,
-                            contentDescription = "Cerrar sesión",
-                            tint               = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                    IconButton(onClick = {}) {
-                        Icon(
-                            imageVector        = Icons.Outlined.Notifications,
-                            contentDescription = "Notificaciones",
-                            tint               = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor    = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick            = onNewOrder,
-                containerColor     = MaterialTheme.colorScheme.primary,
-                contentColor       = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Nueva orden")
-            }
-        },
-        bottomBar = {
-            PupappBottomNav(selectedIndex = 0, onItemSelected = onSelectTab)
-        }
-    ) { innerPadding ->
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+    ) {
         PullToRefreshBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { viewModel.refreshOrders() },
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
+            modifier = Modifier.fillMaxSize()
         ) {
             LazyColumn(
-                contentPadding = PaddingValues(
-                    start  = 16.dp,
-                    end    = 16.dp,
-                    top    = 16.dp,
-                    bottom = 80.dp
-                ),
+                contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
                 item {
-                Row(
-                    verticalAlignment   = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text       = "Órdenes activas",
-                        style      = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text     = "${uiState.orders.count { it.statusId == OrderStatus.PREPARING.id }} activas",
-                            fontSize = 11.sp,
-                            color    = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                            text = "Órdenes activas",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
                         )
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Text(
+                                text = "${uiState.orders.count { it.statusId == OrderStatus.PREPARING.id }} activas",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                            )
+                        }
                     }
+                    Spacer(Modifier.height(8.dp))
                 }
-                Spacer(Modifier.height(8.dp))
-            }
 
-            if (uiState.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+                if (uiState.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
-                }
-            } else if (uiState.error != null) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = uiState.error ?: "Error desconocido",
-                            color = MaterialTheme.colorScheme.error
+                } else if (uiState.error != null) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = uiState.error ?: "Error desconocido",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                } else if (uiState.orders.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No hay órdenes activas",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    items(uiState.orders) { order ->
+                        OrderCard(
+                            order = order,
+                            onClick = { selectedOrder = order }
                         )
                     }
                 }
-            } else if (uiState.orders.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No hay órdenes activas",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            }
+        }
+
+        FloatingActionButton(
+            onClick = { showNewOrderSheet = true },
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+                .size(64.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add, 
+                contentDescription = "Nueva orden",
+                modifier = Modifier.size(28.dp)
+            )
+        }
+    }
+
+    if (showNewOrderSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showNewOrderSheet = false },
+            sheetState = sheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            Box(Modifier.fillMaxHeight(0.833f)) { // Force 5/6 height (leaving 1/6 at top)
+                NewOrderScreen(
+                    onNavigateBack = {
+                        showNewOrderSheet = false
+                        viewModel.refreshOrders()
                     }
-                }
-            } else {
-                items(uiState.orders) { order ->
-                    OrderCard(
-                        order   = order,
-                        onClick = { selectedOrder = order }
-                    )
-                }
+                )
             }
         }
     }
-        selectedOrder?.let { order ->
-            OrderStatusBottomSheet(
-                order    = order,
-                onDismiss = { selectedOrder = null },
-                onStatusChange = { newStatusId ->
-                    viewModel.updateOrderStatus(order.id, newStatusId)
-                    selectedOrder = null
-                }
-            )
-        }
+
+    selectedOrder?.let { order ->
+        OrderStatusBottomSheet(
+            order = order,
+            onDismiss = { selectedOrder = null },
+            onStatusChange = { newStatusId ->
+                viewModel.updateOrderStatus(order.id, newStatusId)
+                selectedOrder = null
+            }
+        )
+    }
 }
 
+@Preview
 @Composable
 fun PreviewOrder() {
     ActiveOrdersScreen()
-}
 }

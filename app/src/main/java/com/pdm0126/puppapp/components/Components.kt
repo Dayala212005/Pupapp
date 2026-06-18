@@ -87,14 +87,16 @@ data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: I
 
 val bottomNavItems = listOf(
     NavItem("Órdenes", Icons.Outlined.List, Icons.Filled.List),
-    NavItem("Nueva", Icons.Outlined.AddCircle, Icons.Filled.AddCircle),
     NavItem("Menú", Icons.Outlined.Restaurant, Icons.Filled.Restaurant),
     NavItem("Historial", Icons.Outlined.History, Icons.Filled.History),
 )
 
 @Composable
 fun PupappBottomNav(selectedIndex: Int, onItemSelected: (Int) -> Unit = {}) {
-    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+    NavigationBar(
+        containerColor = Color.Transparent,
+        tonalElevation = 0.dp
+    ) {
         bottomNavItems.forEachIndexed { index, item ->
             NavigationBarItem(
                 selected = selectedIndex == index,

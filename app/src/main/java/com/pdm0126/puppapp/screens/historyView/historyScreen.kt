@@ -19,82 +19,65 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pdm0126.puppapp.components.OrderCard
-import com.pdm0126.puppapp.components.PupappBottomNav
 import com.pdm0126.puppapp.components.SectionHeader
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
-    onSelectTab: (Int) -> Unit = {},
+    padding: PaddingValues = PaddingValues(),
     viewModel: HistoryViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Todos, 1: Completadas
     var searchQuery by remember { mutableStateOf("") }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Historial", fontWeight = FontWeight.SemiBold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        },
-        bottomBar = {
-            PupappBottomNav(selectedIndex = 3, onItemSelected = onSelectTab)
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            // Tabs
-            PrimaryTabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                indicator = {
-                    TabRowDefaults.PrimaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(selectedTab),
-                        width = 80.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            ) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text("General", color = MaterialTheme.colorScheme.onPrimary) }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text("Resumen", color = MaterialTheme.colorScheme.onPrimary) }
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .padding(padding)
+    ) {
+        // Tabs
+        PrimaryTabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            indicator = {
+                TabRowDefaults.PrimaryIndicator(
+                    modifier = Modifier.tabIndicatorOffset(selectedTab),
+                    width = 80.dp,
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
+        ) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                text = { Text("General", color = MaterialTheme.colorScheme.onPrimary) }
+            )
+            Tab(
+                selected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                text = { Text("Resumen", color = MaterialTheme.colorScheme.onPrimary) }
+            )
+        }
 
-            PullToRefreshBox(
-                isRefreshing = uiState.isRefreshing,
-                onRefresh = { viewModel.refresh() },
-                modifier = Modifier.fillMaxSize()
-            ) {
-                if (selectedTab == 0) {
-                    AllOrdersList(
-                        uiState = uiState,
-                        searchQuery = searchQuery,
-                        onSearchChange = { searchQuery = it },
-                        onLoadMore = { viewModel.loadAllOrders() }
-                    )
-                } else {
-                    DeliveredOrdersView(
-                        uiState = uiState,
-                        onPeriodSelected = { viewModel.setPeriod(it) }
-                    )
-                }
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            if (selectedTab == 0) {
+                AllOrdersList(
+                    uiState = uiState,
+                    searchQuery = searchQuery,
+                    onSearchChange = { searchQuery = it },
+                    onLoadMore = { viewModel.loadAllOrders() }
+                )
+            } else {
+                DeliveredOrdersView(
+                    uiState = uiState,
+                    onPeriodSelected = { viewModel.setPeriod(it) }
+                )
             }
         }
     }
