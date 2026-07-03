@@ -139,23 +139,29 @@ fun QuantityControl(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape)
+            .padding(4.dp)
     ) {
         FilledTonalIconButton(
-            onClick = onDecrease,
-            modifier = Modifier.size(28.dp),
-            enabled = quantity > 1
+            onClick  = onDecrease,
+            shape    = CircleShape,
+            modifier = Modifier.size(32.dp),
+            enabled  = quantity > 0 // Permitir llegar a 0 para quitar? 
+                                    // Según NewOrderView, si es 0 muestra botón "Agregar".
+                                    // Pero el QuantityControl se muestra cuando qty > 0.
         ) {
             Icon(Icons.Filled.Remove, contentDescription = "Reducir", modifier = Modifier.size(16.dp))
         }
         Text(
-            text = quantity.toString(),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 10.dp)
+            text       = quantity.toString(),
+            fontSize   = 15.sp,
+            fontWeight = FontWeight.Bold,
+            modifier   = Modifier.padding(horizontal = 12.dp)
         )
-        FilledTonalIconButton(
-            onClick = onIncrease,
-            modifier = Modifier.size(28.dp)
+        FilledIconButton(
+            onClick  = onIncrease,
+            shape    = CircleShape,
+            modifier = Modifier.size(32.dp)
         ) {
             Icon(Icons.Filled.Add, contentDescription = "Aumentar", modifier = Modifier.size(16.dp))
         }

@@ -7,11 +7,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
@@ -51,6 +53,17 @@ fun MenuScreen(
         .fillMaxSize()
         .padding(padding)
     ) {
+        // Icono de fondo decorativo
+        Icon(
+            imageVector = Icons.Default.Fastfood,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.04f),
+            modifier = Modifier
+                .size(400.dp)
+                .align(Alignment.BottomCenter)
+                .offset(y = 100.dp)
+        )
+
         when {
             isLoading && products.isEmpty() -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -68,30 +81,29 @@ fun MenuScreen(
                 }
             }
             else -> {
-                LazyColumn(
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
                     contentPadding = PaddingValues(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     groupedProducts.forEach { (category, items) ->
-                        item {
+                        item(span = { GridItemSpan(2) }) {
                             CategoryHeader(
                                 title    = category,
                                 onAdd    = { viewModel.openCreateDialog(category) }
                             )
-                            Spacer(Modifier.height(8.dp))
                         }
-                        items.forEach { product ->
-                            item {
-                                MenuItemRow(
-                                    product  = product,
-                                    onEdit   = { viewModel.openEditDialog(product) },
-                                    onDelete = { viewModel.onDeleteClick(product.id) }
-                                )
-                                Spacer(Modifier.height(6.dp))
-                            }
+                        items(items) { product ->
+                            MenuProductCard(
+                                product  = product,
+                                onEdit   = { viewModel.openEditDialog(product) },
+                                onDelete = { viewModel.onDeleteClick(product.id) }
+                            )
                         }
-                        item { Spacer(Modifier.height(16.dp)) }
                     }
+                    item(span = { GridItemSpan(2) }) { Spacer(Modifier.height(80.dp)) }
                 }
             }
         }
@@ -139,69 +151,65 @@ private fun CategoryHeader(title: String, onAdd: () -> Unit) {
     }
 }
 
-// ── Menu item row ────────────────────────────────────────────────────────────
+// ── Menu product card ────────────────────────────────────────────────────────────
 @Composable
-private fun MenuItemRow(
+private fun MenuProductCard(
     product: Product,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
-        shape    = RoundedCornerShape(10.dp),
+        shape    = RoundedCornerShape(20.dp),
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border   = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border   = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier          = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
-        ) {
+        Column {
             // Imagen del producto
-            AsyncImage(
-                model         = product.imageUrl,
-                contentDescription = product.name,
-                contentScale  = ContentScale.Crop,
-                modifier      = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                error         = painterResource(id = android.R.drawable.ic_menu_gallery),
-                placeholder   = painterResource(id = android.R.drawable.ic_menu_gallery)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                AsyncImage(
+                    model         = product.imageUrl,
+                    contentDescription = product.name,
+                    contentScale  = ContentScale.Crop,
+                    modifier      = Modifier.fillMaxSize(),
+                    error         = painterResource(id = android.R.drawable.ic_menu_gallery),
+                    placeholder   = painterResource(id = android.R.drawable.ic_menu_gallery)
+                )
+                
+                // Botones de acción flotantes sobre la imagen
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), CircleShape)
+                ) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(30.dp)) {
+                        Icon(Icons.Outlined.Edit, null, Modifier.size(16.dp), MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
+                        Icon(Icons.Outlined.Delete, null, Modifier.size(16.dp), MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
 
-            Spacer(Modifier.width(10.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(product.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    text     = product.category ?: "Sin categoría",
-                    fontSize = 11.sp,
-                    color    = MaterialTheme.colorScheme.onSurfaceVariant
+                    product.name, 
+                    fontSize = 14.sp, 
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
                 )
-            }
-
-            Text(
-                text       = "$%.2f".format(product.priceBase),
-                fontSize   = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color      = MaterialTheme.colorScheme.primary,
-                modifier   = Modifier.padding(end = 8.dp)
-            )
-
-            IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector        = Icons.Outlined.Edit,
-                    contentDescription = "Editar",
-                    modifier           = Modifier.size(18.dp),
-                    tint               = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector        = Icons.Outlined.Delete,
-                    contentDescription = "Eliminar",
-                    modifier           = Modifier.size(18.dp),
-                    tint               = MaterialTheme.colorScheme.error
+                Text(
+                    text     = "$%.2f".format(product.priceBase),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color    = MaterialTheme.colorScheme.primary
                 )
             }
         }

@@ -54,27 +54,13 @@ fun LoginScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 48.dp)
         ) {
-            // Logo
-            Surface(
-                shape  = RoundedCornerShape(20.dp),
-                color  = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(72.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        imageVector        = Icons.Filled.Receipt,
-                        contentDescription = null,
-                        tint               = MaterialTheme.colorScheme.onPrimary,
-                        modifier           = Modifier.size(38.dp)
-                    )
-                }
-            }
 
             Spacer(Modifier.height(16.dp))
 
             Text(
                 text       = "Pupapp",
                 style      = MaterialTheme.typography.headlineMedium,
+                fontSize = 48.sp,
                 fontWeight = FontWeight.Bold,
                 color      = MaterialTheme.colorScheme.primary
             )
@@ -84,7 +70,7 @@ fun LoginScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(Modifier.height(36.dp))
+            Spacer(Modifier.height(56.dp))
 
             Card(
                 shape  = RoundedCornerShape(16.dp),

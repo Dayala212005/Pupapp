@@ -35,8 +35,14 @@ class NewOrderViewModel(
     private val _customerName = MutableStateFlow("")
     val customerName = _customerName.asStateFlow()
 
+    private val _orderReference = MutableStateFlow("")
+    val orderReference = _orderReference.asStateFlow()
+
     private val _adjustmentNote = MutableStateFlow("")
     val adjustmentNote = _adjustmentNote.asStateFlow()
+
+    private val _customTotal = MutableStateFlow("")
+    val customTotal = _customTotal.asStateFlow()
 
     // Estados UI
     private val _isLoading = MutableStateFlow(false)
@@ -85,7 +91,9 @@ class NewOrderViewModel(
     }
 
     fun onCustomerNameChange(value: String) { _customerName.value = value }
+    fun onOrderReferenceChange(value: String) { _orderReference.value = value }
     fun onAdjustmentNoteChange(value: String) { _adjustmentNote.value = value }
+    fun onCustomTotalChange(value: String) { _customTotal.value = value }
 
     fun onIncrease(productId: Int) {
         val current = _quantities.value.toMutableMap()
@@ -115,9 +123,9 @@ class NewOrderViewModel(
             try {
                 ordersAPI.createOrder(
                     CreateOrderRequest(
-                        orderReference = null,
+                        orderReference = _orderReference.value.ifBlank { null },
                         customerName = _customerName.value.ifBlank { null },
-                        finalTotal = total.value,
+                        finalTotal = _customTotal.value.toDoubleOrNull(),
                         totalAdjustmentNote = _adjustmentNote.value.ifBlank { null },
                         items = items.map { (product, qty) ->
                             CreateOrderItemRequest(
@@ -139,7 +147,9 @@ class NewOrderViewModel(
 
     private fun resetForm() {
         _customerName.value  = ""
+        _orderReference.value = ""
         _adjustmentNote.value = ""
+        _customTotal.value = ""
         _quantities.value    = emptyMap()
     }
 }
