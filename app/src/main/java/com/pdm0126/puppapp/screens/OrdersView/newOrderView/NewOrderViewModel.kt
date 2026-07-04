@@ -1,14 +1,16 @@
 package com.pdm0126.puppapp.screens.OrdersView.newOrderView
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.pdm0126.puppapp.PupappApplication
 import com.pdm0126.puppapp.data.dto.CreateOrderItemRequest
 import com.pdm0126.puppapp.data.dto.CreateOrderRequest
 import com.pdm0126.puppapp.data.model.Product
 import com.pdm0126.puppapp.data.remote.PupappAPI.OrdersAPI
 import com.pdm0126.puppapp.data.remote.PupappAPI.ProductsAPI
-import com.pdm0126.puppapp.data.repositories.OrdersAPIImpl
-import com.pdm0126.puppapp.data.repositories.ProductsAPIImpl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,8 +21,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class NewOrderViewModel(
-    private val ordersAPI: OrdersAPI = OrdersAPIImpl(),
-    private val productsAPI: ProductsAPI = ProductsAPIImpl()
+    private val ordersAPI: OrdersAPI,
+    private val productsAPI: ProductsAPI
 ) : ViewModel() {
 
     // Productos del menú
@@ -73,6 +75,12 @@ class NewOrderViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     init {
+        // Opción B: Observar Room
+        viewModelScope.launch {
+            productsAPI.productsFlow.collect { list ->
+                _products.value = list
+            }
+        }
         loadProducts()
     }
 
@@ -81,7 +89,8 @@ class NewOrderViewModel(
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                _products.value = productsAPI.getProducts(page = 1, limit = 100)
+                // Solo disparamos la petición
+                productsAPI.getProducts(page = 1, limit = 100)
             } catch (e: Exception) {
                 _errorMessage.value = "Error al cargar productos: ${e.localizedMessage ?: "Error desconocido"}"
             } finally {
@@ -121,6 +130,9 @@ class NewOrderViewModel(
             _isLoading.value = true
             _errorMessage.value = null
             try {
+                // Sincronizar pendientes antes de crear una nueva
+                ordersAPI.syncPendingOrders()
+
                 ordersAPI.createOrder(
                     CreateOrderRequest(
                         orderReference = _orderReference.value.ifBlank { null },
@@ -130,7 +142,8 @@ class NewOrderViewModel(
                         items = items.map { (product, qty) ->
                             CreateOrderItemRequest(
                                 productId = product.id,
-                                quantity = qty
+                                quantity = qty,
+                                productName = product.name // Pasar nombre para uso offline
                             )
                         }
                     )
@@ -151,5 +164,17 @@ class NewOrderViewModel(
         _adjustmentNote.value = ""
         _customTotal.value = ""
         _quantities.value    = emptyMap()
+    }
+
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                val app = this[APPLICATION_KEY] as PupappApplication
+                NewOrderViewModel(
+                    app.appProvider.provideOrdersRepository(),
+                    app.appProvider.provideProductsRepository()
+                )
+            }
+        }
     }
 }

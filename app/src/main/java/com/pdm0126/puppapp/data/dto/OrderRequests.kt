@@ -15,7 +15,8 @@ data class CreateOrderRequest(
 @Serializable
 data class CreateOrderItemRequest(
     val productId: Int,
-    val quantity: Int
+    val quantity: Int,
+    val productName: String? = null // Para uso local offline
 )
 
 @Serializable

@@ -1,11 +1,14 @@
 package com.pdm0126.puppapp.screens.historyView
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.pdm0126.puppapp.PupappApplication
 import com.pdm0126.puppapp.components.OrderPreview
 import com.pdm0126.puppapp.data.model.Order
 import com.pdm0126.puppapp.data.remote.PupappAPI.OrdersAPI
-import com.pdm0126.puppapp.data.repositories.OrdersAPIImpl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,7 +44,7 @@ data class HistoryUiState(
 )
 
 class HistoryViewModel(
-    private val ordersAPI: OrdersAPI = OrdersAPIImpl()
+    private val ordersAPI: OrdersAPI
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HistoryUiState())
@@ -50,6 +53,17 @@ class HistoryViewModel(
     private val pageSize = 10
 
     init {
+        // Opción B: Observar Room
+        viewModelScope.launch {
+            ordersAPI.ordersFlow.collect { orders ->
+                // Actualizamos la lista completa (allOrders) desde Room
+                // Nota: Esto ignora la paginación de la UI por simplicidad, 
+                // pero asegura que los datos no "desaparezcan" sin red.
+                _uiState.value = _uiState.value.copy(
+                    allOrders = orders.map { it.toPreview() }
+                )
+            }
+        }
         loadInitialData()
     }
 
@@ -64,18 +78,21 @@ class HistoryViewModel(
         viewModelScope.launch {
             val pageToLoad = if (reset) 1 else _uiState.value.currentPage
             _uiState.value = _uiState.value.copy(
-                isLoadingAll = true,
+                isLoadingAll = !reset, // No mostramos el skeleton principal si es un refresh manual
                 currentPage = pageToLoad,
-                allOrders = if (reset) emptyList() else _uiState.value.allOrders,
                 hasReachedEnd = if (reset) false else _uiState.value.hasReachedEnd
             )
 
             try {
+                try {
+                    ordersAPI.syncPendingOrders()
+                } catch (e: Exception) { /* Ignorar error de sync para no bloquear carga */ }
+                
                 val orders = ordersAPI.getOrders(page = pageToLoad, limit = pageSize)
                 val newPreviews = orders.map { it.toPreview() }
                 
                 _uiState.value = _uiState.value.copy(
-                    allOrders = _uiState.value.allOrders + newPreviews,
+                    allOrders = if (reset) newPreviews else _uiState.value.allOrders + newPreviews,
                     isLoadingAll = false,
                     currentPage = pageToLoad + 1,
                     hasReachedEnd = orders.size < pageSize
@@ -83,7 +100,7 @@ class HistoryViewModel(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoadingAll = false,
-                    error = e.message ?: "Error al cargar el historial"
+                    error = if (_uiState.value.allOrders.isEmpty()) (e.message ?: "Error al cargar el historial") else null
                 )
             }
         }
@@ -101,6 +118,10 @@ class HistoryViewModel(
             val (startDate, endDate) = getDatesForPeriod(_uiState.value.selectedPeriod)
             
             try {
+                try {
+                    ordersAPI.syncPendingOrders()
+                } catch (e: Exception) { /* Ignorar */ }
+
                 val orders = ordersAPI.getDeliveredOrdersByPeriod(startDate, endDate)
                 
                 val totalRevenue = orders.sumOf { it.finalTotal }
@@ -163,6 +184,15 @@ class HistoryViewModel(
             loadAllOrders(reset = true)
             loadDeliveredOrders()
             _uiState.value = _uiState.value.copy(isRefreshing = false)
+        }
+    }
+
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                val app = this[APPLICATION_KEY] as PupappApplication
+                HistoryViewModel(app.appProvider.provideOrdersRepository())
+            }
         }
     }
 }

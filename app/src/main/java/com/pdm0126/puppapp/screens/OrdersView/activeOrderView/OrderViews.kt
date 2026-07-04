@@ -32,7 +32,7 @@ import com.pdm0126.puppapp.screens.OrdersView.newOrderView.NewOrderScreen
 @Composable
 fun ActiveOrdersScreen(
     padding: PaddingValues = PaddingValues(),
-    viewModel: ActiveOrdersViewModel = viewModel(),
+    viewModel: ActiveOrdersViewModel = viewModel(factory = ActiveOrdersViewModel.Factory),
     onNewOrder: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -81,7 +81,7 @@ fun ActiveOrdersScreen(
                     Spacer(Modifier.height(8.dp))
                 }
 
-                if (uiState.isLoading) {
+                if (uiState.isLoading && uiState.orders.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -92,7 +92,7 @@ fun ActiveOrdersScreen(
                             CircularProgressIndicator()
                         }
                     }
-                } else if (uiState.error != null) {
+                } else if (uiState.error != null && uiState.orders.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier

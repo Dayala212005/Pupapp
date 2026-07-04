@@ -4,6 +4,7 @@ import com.pdm0126.puppapp.data.dto.AuthResponse
 import com.pdm0126.puppapp.data.dto.LoginRequest
 import com.pdm0126.puppapp.data.dto.RegisterRequest
 import com.pdm0126.puppapp.data.dto.toModel
+import com.pdm0126.puppapp.data.local.AppDatabase
 import com.pdm0126.puppapp.data.model.UserSession
 import com.pdm0126.puppapp.data.remote.KtorClient
 import com.pdm0126.puppapp.data.remote.PupappAPI.AuthAPI
@@ -15,7 +16,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 
-class AuthAPIImpl : AuthAPI {
+class AuthAPIImpl(private val database: AppDatabase) : AuthAPI {
     private val client = KtorClient.client
 
     override suspend fun login(request: LoginRequest): UserSession {
@@ -51,5 +52,6 @@ class AuthAPIImpl : AuthAPI {
 
     override suspend fun logout() {
         KtorClient.sessionManager.clearSession()
+        database.clearAllTables()
     }
 }
