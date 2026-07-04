@@ -26,7 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun RegisterScreen(
     onNavigateBack: () -> Unit = {},
-    viewModel: RegisterViewModel = viewModel()
+    viewModel: RegisterViewModel = viewModel(factory = RegisterViewModel.Factory)
 ) {
     val businessName    by viewModel.businessName.collectAsState()
     val sessionName     by viewModel.sessionName.collectAsState()

@@ -32,7 +32,7 @@ import com.pdm0126.puppapp.data.model.Product
 @Composable
 fun NewOrderScreen(
     onNavigateBack: () -> Unit = {},
-    viewModel: NewOrderViewModel = viewModel()
+    viewModel: NewOrderViewModel = viewModel(factory = NewOrderViewModel.Factory)
 ) {
     val customerName    by viewModel.customerName.collectAsState()
     val orderReference  by viewModel.orderReference.collectAsState()

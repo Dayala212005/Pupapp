@@ -4,14 +4,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.pdm0126.puppapp.PupappApplication
 import com.pdm0126.puppapp.data.dto.LoginRequest
 import com.pdm0126.puppapp.data.remote.PupappAPI.AuthAPI
-import com.pdm0126.puppapp.data.repositories.AuthAPIImpl
 import kotlinx.coroutines.launch
 
 class LoginViewModel(
-    private val authAPI: AuthAPI = AuthAPIImpl()
+    private val authAPI: AuthAPI
 ) : ViewModel() {
 
     var sessionName by mutableStateOf("")
@@ -42,6 +45,15 @@ class LoginViewModel(
                 errorMessage = "Error al iniciar sesión: ${e.localizedMessage ?: "Error desconocido"}"
             } finally {
                 isLoading = false
+            }
+        }
+    }
+
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                val app = this[APPLICATION_KEY] as PupappApplication
+                LoginViewModel(app.appProvider.provideAuthRepository())
             }
         }
     }

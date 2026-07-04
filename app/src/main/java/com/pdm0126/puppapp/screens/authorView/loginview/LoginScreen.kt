@@ -26,7 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun LoginScreen(
     onNavigateToRegister: () -> Unit = {},
     onNavigateToOrders: () -> Unit = {},
-    viewModel: LoginViewModel = viewModel()
+    viewModel: LoginViewModel = viewModel(factory = LoginViewModel.Factory)
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
 

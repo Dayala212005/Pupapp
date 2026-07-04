@@ -39,7 +39,7 @@ import java.io.ByteArrayOutputStream
 @Composable
 fun MenuScreen(
     padding: PaddingValues = PaddingValues(),
-    viewModel: MenuViewModel = viewModel()
+    viewModel: MenuViewModel = viewModel(factory = MenuViewModel.Factory)
 ) {
     val products     by viewModel.products.collectAsState()
     val isLoading    by viewModel.isLoading.collectAsState()

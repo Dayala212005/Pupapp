@@ -1,16 +1,20 @@
 package com.pdm0126.puppapp.screens.authorView.registrerView
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import com.pdm0126.puppapp.data.dto.RegisterRequest
 import com.pdm0126.puppapp.data.remote.PupappAPI.AuthAPI
-import com.pdm0126.puppapp.data.repositories.AuthAPIImpl
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.pdm0126.puppapp.PupappApplication
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
 import kotlinx.coroutines.launch
+
+
 class RegisterViewModel(
-    private val authAPI: AuthAPI = AuthAPIImpl()
+    private val authAPI: AuthAPI
 ) : ViewModel() {
 
     private val _businessName = MutableStateFlow("")
@@ -78,6 +82,15 @@ class RegisterViewModel(
                 android.util.Log.e("RegisterVM", "Error: ${e.localizedMessage}", e)
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                val app = this[APPLICATION_KEY] as PupappApplication
+                RegisterViewModel(app.appProvider.provideAuthRepository())
             }
         }
     }

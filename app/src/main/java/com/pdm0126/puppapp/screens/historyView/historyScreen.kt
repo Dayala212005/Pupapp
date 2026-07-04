@@ -26,7 +26,7 @@ import java.util.Locale
 @Composable
 fun HistoryScreen(
     padding: PaddingValues = PaddingValues(),
-    viewModel: HistoryViewModel = viewModel()
+    viewModel: HistoryViewModel = viewModel(factory = HistoryViewModel.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Todos, 1: Completadas

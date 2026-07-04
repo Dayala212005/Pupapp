@@ -1,5 +1,6 @@
 package com.pdm0126.puppapp.navigation
 
+import android.app.Application
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -25,7 +26,13 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.pdm0126.puppapp.data.remote.KtorClient
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.HasDefaultViewModelProviderFactory
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.MutableCreationExtras
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -135,10 +142,22 @@ fun PupappNavigation(sessionManager: SessionManager) {
                 }
             }
         ) { innerPadding ->
+            val context = LocalContext.current
             val viewModelStore = remember { ViewModelStore() }
-            val owner = remember(viewModelStore) {
-                object : ViewModelStoreOwner {
+            val owner = remember(viewModelStore, context) {
+                object : ViewModelStoreOwner, HasDefaultViewModelProviderFactory {
                     override val viewModelStore: ViewModelStore = viewModelStore
+                    override val defaultViewModelProviderFactory: ViewModelProvider.Factory =
+                        (context.applicationContext as? Application)?.let {
+                            ViewModelProvider.AndroidViewModelFactory.getInstance(it)
+                        } ?: ViewModelProvider.NewInstanceFactory()
+
+                    override val defaultViewModelCreationExtras: CreationExtras
+                        get() = MutableCreationExtras().apply {
+                            (context.applicationContext as? Application)?.let {
+                                set(APPLICATION_KEY, it)
+                            }
+                        }
                 }
             }
             DisposableEffect(viewModelStore) {
