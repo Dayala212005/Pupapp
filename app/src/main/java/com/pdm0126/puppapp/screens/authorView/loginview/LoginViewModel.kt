@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.pdm0126.puppapp.PupappApplication
 import com.pdm0126.puppapp.data.dto.LoginRequest
 import com.pdm0126.puppapp.data.remote.PupappAPI.AuthAPI
+import com.pdm0126.puppapp.utils.toUserFriendlyMessage
 import kotlinx.coroutines.launch
 
 class LoginViewModel(
@@ -42,7 +43,7 @@ class LoginViewModel(
                 authAPI.login(LoginRequest(sessionName, password))
                 loginSuccess = true
             } catch (e: Exception) {
-                errorMessage = "Error al iniciar sesión: ${e.localizedMessage ?: "Error desconocido"}"
+                errorMessage = e.toUserFriendlyMessage(isLogin = true)
             } finally {
                 isLoading = false
             }

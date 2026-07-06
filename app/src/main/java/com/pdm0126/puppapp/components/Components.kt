@@ -22,9 +22,6 @@ import com.pdm0126.puppapp.ui.Amber40
 import com.pdm0126.puppapp.ui.Green40
 import com.pdm0126.puppapp.ui.Red40
 
-// ─── Status chip ────────────────────────────────────────────────────────────
-
-// IDs según API: 1: Pendiente, 2: Preparando, 3: Listo, 4: Entregado, 5: Cancelado
 enum class OrderStatus(val id: Int, val label: String) {
     PENDING(1, "Pendiente"),
     PREPARING(2, "Preparando"),
@@ -62,8 +59,6 @@ fun StatusChip(statusId: Int) {
     }
 }
 
-// ─── Avatar circle ───────────────────────────────────────────────────────────
-
 @Composable
 fun AvatarCircle(initials: String, modifier: Modifier = Modifier) {
     Box(
@@ -81,8 +76,6 @@ fun AvatarCircle(initials: String, modifier: Modifier = Modifier) {
         )
     }
 }
-
-// ─── Bottom nav ──────────────────────────────────────────────────────────────
 
 data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
 
@@ -114,8 +107,6 @@ fun PupappBottomNav(selectedIndex: Int, onItemSelected: (Int) -> Unit = {}) {
     }
 }
 
-// ─── Section header ──────────────────────────────────────────────────────────
-
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier) {
     Text(
@@ -126,8 +117,6 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier) {
         modifier = modifier.padding(bottom = 6.dp)
     )
 }
-
-// ─── Quantity control ────────────────────────────────────────────────────────
 
 @Composable
 fun QuantityControl(
@@ -146,9 +135,7 @@ fun QuantityControl(
             onClick  = onDecrease,
             shape    = CircleShape,
             modifier = Modifier.size(32.dp),
-            enabled  = quantity > 0 // Permitir llegar a 0 para quitar? 
-                                    // Según NewOrderView, si es 0 muestra botón "Agregar".
-                                    // Pero el QuantityControl se muestra cuando qty > 0.
+            enabled  = quantity > 0
         ) {
             Icon(Icons.Filled.Remove, contentDescription = "Reducir", modifier = Modifier.size(16.dp))
         }
@@ -167,8 +154,6 @@ fun QuantityControl(
         }
     }
 }
-
-// ─── Order card (used in active orders list) ─────────────────────────────────
 
 data class OrderPreview(
     val id: Int,
@@ -290,7 +275,6 @@ fun OrderStatusBottomSheet(
             )
             Spacer(Modifier.height(12.dp))
 
-            // Botones de estado
             listOf(
                 1 to "Pendiente",
                 2 to "Preparando",

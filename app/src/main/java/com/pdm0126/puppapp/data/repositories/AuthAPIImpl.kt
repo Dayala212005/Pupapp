@@ -9,12 +9,11 @@ import com.pdm0126.puppapp.data.model.UserSession
 import com.pdm0126.puppapp.data.remote.KtorClient
 import com.pdm0126.puppapp.data.remote.PupappAPI.AuthAPI
 import io.ktor.client.call.body
+import io.ktor.client.plugins.ResponseException
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import io.ktor.http.isSuccess
 
 class AuthAPIImpl(private val database: AppDatabase) : AuthAPI {
     private val client = KtorClient.client
@@ -25,8 +24,8 @@ class AuthAPIImpl(private val database: AppDatabase) : AuthAPI {
             setBody(request)
         }
 
-        if (!response.status.isSuccess()) {
-            throw Exception("HTTP_ERROR_${response.status.value}")
+        if (response.status.value != 200 && response.status.value != 201) {
+            throw ResponseException(response, "Login failed")
         }
 
         val authResponse: AuthResponse = response.body()
@@ -41,12 +40,8 @@ class AuthAPIImpl(private val database: AppDatabase) : AuthAPI {
             setBody(request)
         }
 
-        if (response.status == HttpStatusCode.Conflict) {
-            throw Exception("ALREADY_EXISTS")
-        }
-
-        if (!response.status.isSuccess()) {
-            throw Exception("HTTP_ERROR_${response.status.value}")
+        if (response.status.value != 200 && response.status.value != 201) {
+            throw ResponseException(response, "Registration failed")
         }
     }
 
