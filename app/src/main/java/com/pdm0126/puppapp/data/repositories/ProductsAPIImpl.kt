@@ -9,6 +9,7 @@ import com.pdm0126.puppapp.data.model.Product
 import com.pdm0126.puppapp.data.remote.KtorClient
 import com.pdm0126.puppapp.data.remote.PupappAPI.ProductsAPI
 import io.ktor.client.call.body
+import io.ktor.client.plugins.ResponseException
 import io.ktor.client.request.delete
 import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
@@ -31,21 +32,23 @@ class ProductsAPIImpl(private val productDao: ProductDao) : ProductsAPI {
     }
 
     override suspend fun getProducts(page: Int, limit: Int): List<Product> {
-        return try {
-            val response: List<ProductDTO> = client.get("/api/products") {
-                parameter("page", page)
-                parameter("limit", limit)
-            }.body()
-            val products = response.map { it.toModel() }
-            
-            // Simplemente insertamos. Room reemplazará los existentes por su ID.
-            productDao.insertProducts(products.map { it.toEntity() })
-            
-            return products
-        } catch (e: Exception) {
-            // Si falla el internet, devolvemos lo que hay en Room
-            productDao.getAllProducts().first().map { it.toModel() }
+        val response = client.get("/api/products") {
+            parameter("page", page)
+            parameter("limit", limit)
         }
+
+        if (response.status.value != 200 && response.status.value != 201) {
+            try {
+                return productDao.getAllProducts().first().map { it.toModel() }
+            } catch (e: Exception) {
+                throw ResponseException(response, "Failed to fetch products")
+            }
+        }
+
+        val productDTOs: List<ProductDTO> = response.body()
+        val products = productDTOs.map { it.toModel() }
+        productDao.insertProducts(products.map { it.toEntity() })
+        return products
     }
 
     override suspend fun getProductById(id: Int): Product {
@@ -56,7 +59,7 @@ class ProductsAPIImpl(private val productDao: ProductDao) : ProductsAPI {
             product
         } catch (e: Exception) {
             productDao.getProductById(id)?.toModel() 
-                ?: throw Exception("Producto no encontrado localmente ni en red")
+                ?: throw e
         }
     }
 
@@ -67,11 +70,10 @@ class ProductsAPIImpl(private val productDao: ProductDao) : ProductsAPI {
         imageBytes: ByteArray?,
         imageName: String?
     ): Product {
-        // 1. Generar ID temporal y guardar localmente
         val tempId = -(System.currentTimeMillis() % 1000000).toInt()
         val tempProduct = Product(
             id = tempId,
-            restaurantId = 0, // El servidor suele asignar esto
+            restaurantId = 0,
             name = name,
             priceBase = priceBase.toDoubleOrNull() ?: 0.0,
             category = category,
@@ -100,13 +102,10 @@ class ProductsAPIImpl(private val productDao: ProductDao) : ProductsAPI {
             }.body()
             
             val product = response.toModel()
-            // 2. Borrar el temporal e insertar el real
             productDao.deleteProduct(tempProduct.toEntity())
             productDao.insertProduct(product.toEntity(isSynced = true))
             product
         } catch (e: Exception) {
-            // Si falla el internet, devolvemos el temporal. 
-            // La UI lo mostrará porque productsFlow observa Room.
             tempProduct
         }
     }
@@ -115,7 +114,6 @@ class ProductsAPIImpl(private val productDao: ProductDao) : ProductsAPI {
         val pending = productDao.getUnsyncedProducts()
         pending.forEach { entity ->
             try {
-                // Solo manejamos CREATE por ahora para simplificar
                 if (entity.pendingAction == "CREATE") {
                     val response: ProductDTO = client.post("/api/products") {
                         setBody(
@@ -124,19 +122,16 @@ class ProductsAPIImpl(private val productDao: ProductDao) : ProductsAPI {
                                     append("name", entity.name)
                                     append("price_base", entity.priceBase.toString())
                                     append("category", entity.category ?: "")
-                                    // Nota: Las imágenes offline son más complejas, se omiten por ahora
                                 }
                             )
                         )
                     }.body()
                     
                     val syncedProduct = response.toModel()
-                    productDao.deleteProduct(entity) // Borra temporal
+                    productDao.deleteProduct(entity)
                     productDao.insertProduct(syncedProduct.toEntity(isSynced = true))
                 }
-            } catch (e: Exception) {
-                // Ignorar y seguir con el siguiente
-            }
+            } catch (e: Exception) { }
         }
     }
 
@@ -172,7 +167,6 @@ class ProductsAPIImpl(private val productDao: ProductDao) : ProductsAPI {
     }
 
     override suspend fun deleteProduct(id: Int) {
-        // Borramos en red y luego en local
         client.delete("/api/products/$id")
         val product = productDao.getProductById(id)
         if (product != null) {

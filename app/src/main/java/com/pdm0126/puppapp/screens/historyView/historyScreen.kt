@@ -92,7 +92,6 @@ fun AllOrdersList(
 ) {
     val listState = rememberLazyListState()
 
-    // Infinite scroll detection
     val shouldLoadMore = remember {
         derivedStateOf {
             val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()

@@ -10,6 +10,7 @@ import com.pdm0126.puppapp.components.OrderPreview
 import com.pdm0126.puppapp.data.dto.UpdateOrderStatusRequest
 import com.pdm0126.puppapp.data.model.Order
 import com.pdm0126.puppapp.data.remote.PupappAPI.OrdersAPI
+import com.pdm0126.puppapp.utils.toUserFriendlyMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,12 +33,8 @@ class ActiveOrdersViewModel(
     val uiState: StateFlow<ActiveOrdersUiState> = _uiState.asStateFlow()
 
     init {
-        // Observar Room continuamente
         viewModelScope.launch {
             ordersAPI.ordersFlow.collect { orders ->
-                // Filtramos las órdenes activas si es necesario, 
-                // o confiamos en que ordersFlow ya trae lo que necesitamos.
-                // Según OrdersAPIImpl.getActiveOrders(), son status < 4.
                 val activeOnes = orders.filter { it.statusId < 4 }
                 _uiState.value = _uiState.value.copy(
                     orders = activeOnes.map { it.toPreview() }
@@ -63,12 +60,10 @@ class ActiveOrdersViewModel(
 
     private suspend fun fetchOrders() {
         try {
-            // Intentar sincronizar antes de pedir las nuevas, sin bloquear si falla
             try {
                 ordersAPI.syncPendingOrders()
-            } catch (e: Exception) { /* sync error */ }
+            } catch (e: Exception) { }
 
-            // Solo disparamos la petición. El Flow de arriba capturará los cambios en Room.
             ordersAPI.getActiveOrders()
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
@@ -78,7 +73,7 @@ class ActiveOrdersViewModel(
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 isRefreshing = false,
-                error = e.message ?: "Error al cargar las órdenes"
+                error = e.toUserFriendlyMessage()
             )
         }
     }
@@ -106,7 +101,7 @@ class ActiveOrdersViewModel(
                 fetchOrders()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    error = "Error al actualizar estado: ${e.localizedMessage ?: "Error desconocido"}"
+                    error = e.toUserFriendlyMessage()
                 )
             }
         }

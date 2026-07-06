@@ -9,6 +9,7 @@ import com.pdm0126.puppapp.PupappApplication
 import com.pdm0126.puppapp.components.OrderPreview
 import com.pdm0126.puppapp.data.model.Order
 import com.pdm0126.puppapp.data.remote.PupappAPI.OrdersAPI
+import com.pdm0126.puppapp.utils.toUserFriendlyMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,12 +54,8 @@ class HistoryViewModel(
     private val pageSize = 10
 
     init {
-        // Opción B: Observar Room
         viewModelScope.launch {
             ordersAPI.ordersFlow.collect { orders ->
-                // Actualizamos la lista completa (allOrders) desde Room
-                // Nota: Esto ignora la paginación de la UI por simplicidad, 
-                // pero asegura que los datos no "desaparezcan" sin red.
                 _uiState.value = _uiState.value.copy(
                     allOrders = orders.map { it.toPreview() }
                 )
@@ -78,7 +75,7 @@ class HistoryViewModel(
         viewModelScope.launch {
             val pageToLoad = if (reset) 1 else _uiState.value.currentPage
             _uiState.value = _uiState.value.copy(
-                isLoadingAll = !reset, // No mostramos el skeleton principal si es un refresh manual
+                isLoadingAll = !reset,
                 currentPage = pageToLoad,
                 hasReachedEnd = if (reset) false else _uiState.value.hasReachedEnd
             )
@@ -86,7 +83,7 @@ class HistoryViewModel(
             try {
                 try {
                     ordersAPI.syncPendingOrders()
-                } catch (e: Exception) { /* Ignorar error de sync para no bloquear carga */ }
+                } catch (e: Exception) { }
                 
                 val orders = ordersAPI.getOrders(page = pageToLoad, limit = pageSize)
                 val newPreviews = orders.map { it.toPreview() }
@@ -100,7 +97,7 @@ class HistoryViewModel(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoadingAll = false,
-                    error = if (_uiState.value.allOrders.isEmpty()) (e.message ?: "Error al cargar el historial") else null
+                    error = if (_uiState.value.allOrders.isEmpty()) e.toUserFriendlyMessage() else null
                 )
             }
         }
@@ -114,16 +111,13 @@ class HistoryViewModel(
     fun loadDeliveredOrders() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingDelivered = true)
-            
             val (startDate, endDate) = getDatesForPeriod(_uiState.value.selectedPeriod)
-            
             try {
                 try {
                     ordersAPI.syncPendingOrders()
-                } catch (e: Exception) { /* Ignorar */ }
+                } catch (e: Exception) { }
 
                 val orders = ordersAPI.getDeliveredOrdersByPeriod(startDate, endDate)
-                
                 val totalRevenue = orders.sumOf { it.finalTotal }
                 val totalCount = orders.size
                 
@@ -139,7 +133,7 @@ class HistoryViewModel(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoadingDelivered = false,
-                    error = e.message ?: "Error al cargar órdenes entregadas"
+                    error = e.toUserFriendlyMessage()
                 )
             }
         }
@@ -148,16 +142,13 @@ class HistoryViewModel(
     private fun getDatesForPeriod(period: HistoryPeriod): Pair<String, String> {
         val calendar = Calendar.getInstance()
         val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        
         val endDate = formatter.format(calendar.time)
-        
         when (period) {
             HistoryPeriod.WEEK -> calendar.add(Calendar.DAY_OF_YEAR, -7)
             HistoryPeriod.MONTH -> calendar.add(Calendar.MONTH, -1)
             HistoryPeriod.QUARTER -> calendar.add(Calendar.MONTH, -3)
             HistoryPeriod.YEAR -> calendar.add(Calendar.YEAR, -1)
         }
-        
         val startDate = formatter.format(calendar.time)
         return Pair(startDate, endDate)
     }
@@ -174,7 +165,7 @@ class HistoryViewModel(
             total = finalTotal,
             statusId = statusId,
             items = items,
-            showId = true
+            showId = false
         )
     }
 

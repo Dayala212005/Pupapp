@@ -11,6 +11,7 @@ import com.pdm0126.puppapp.data.dto.CreateOrderRequest
 import com.pdm0126.puppapp.data.model.Product
 import com.pdm0126.puppapp.data.remote.PupappAPI.OrdersAPI
 import com.pdm0126.puppapp.data.remote.PupappAPI.ProductsAPI
+import com.pdm0126.puppapp.utils.toUserFriendlyMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,15 +26,12 @@ class NewOrderViewModel(
     private val productsAPI: ProductsAPI
 ) : ViewModel() {
 
-    // Productos del menú
     private val _products = MutableStateFlow<List<Product>>(emptyList())
     val products = _products.asStateFlow()
 
-    // Mapa de productId -> cantidad seleccionada
     private val _quantities = MutableStateFlow<Map<Int, Int>>(emptyMap())
     val quantities = _quantities.asStateFlow()
 
-    // Campos de la orden
     private val _customerName = MutableStateFlow("")
     val customerName = _customerName.asStateFlow()
 
@@ -46,7 +44,6 @@ class NewOrderViewModel(
     private val _customTotal = MutableStateFlow("")
     val customTotal = _customTotal.asStateFlow()
 
-    // Estados UI
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
@@ -56,12 +53,10 @@ class NewOrderViewModel(
     private val _orderSuccess = MutableStateFlow(false)
     val orderSuccess = _orderSuccess.asStateFlow()
 
-    // Productos agrupados por categoría
     val groupedProducts: StateFlow<Map<String, List<Product>>> = _products
         .map { list -> list.groupBy { it.category ?: "Sin categoría" } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-    // Items seleccionados (quantity > 0)
     val selectedItems: StateFlow<List<Pair<Product, Int>>> = combine(_products, _quantities) { products, quantities ->
         products.mapNotNull { product ->
             val qty = quantities[product.id] ?: 0
@@ -69,13 +64,11 @@ class NewOrderViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Total calculado
     val total: StateFlow<Double> = selectedItems
         .map { items -> items.sumOf { (product, qty) -> product.priceBase * qty } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     init {
-        // Opción B: Observar Room
         viewModelScope.launch {
             productsAPI.productsFlow.collect { list ->
                 _products.value = list
@@ -89,10 +82,9 @@ class NewOrderViewModel(
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                // Solo disparamos la petición
                 productsAPI.getProducts(page = 1, limit = 100)
             } catch (e: Exception) {
-                _errorMessage.value = "Error al cargar productos: ${e.localizedMessage ?: "Error desconocido"}"
+                _errorMessage.value = e.toUserFriendlyMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -130,8 +122,9 @@ class NewOrderViewModel(
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                // Sincronizar pendientes antes de crear una nueva
-                ordersAPI.syncPendingOrders()
+                try {
+                    ordersAPI.syncPendingOrders()
+                } catch (e: Exception) {}
 
                 ordersAPI.createOrder(
                     CreateOrderRequest(
@@ -143,7 +136,7 @@ class NewOrderViewModel(
                             CreateOrderItemRequest(
                                 productId = product.id,
                                 quantity = qty,
-                                productName = product.name // Pasar nombre para uso offline
+                                productName = product.name
                             )
                         }
                     )
@@ -151,7 +144,7 @@ class NewOrderViewModel(
                 _orderSuccess.value = true
                 resetForm()
             } catch (e: Exception) {
-                _errorMessage.value = "Error al crear orden: ${e.localizedMessage ?: "Error desconocido"}"
+                _errorMessage.value = e.toUserFriendlyMessage()
             } finally {
                 _isLoading.value = false
             }

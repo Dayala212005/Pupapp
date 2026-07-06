@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.pdm0126.puppapp.PupappApplication
+import com.pdm0126.puppapp.utils.toUserFriendlyMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -53,7 +54,6 @@ class RegisterViewModel(
 
     fun onRegisterClick() {
         if (_isLoading.value) return
-        android.util.Log.d("RegisterVM", "businessName=${_businessName.value}, sessionName=${_sessionName.value}")
 
         if (_businessName.value.isBlank() || _sessionName.value.isBlank() ||
             _password.value.isBlank() || _confirmPassword.value.isBlank()
@@ -71,15 +71,10 @@ class RegisterViewModel(
             _isLoading.value = true
             _errorMessage.value = null
             try {
-                authAPI.register(RegisterRequest( _sessionName.value, _password.value,_businessName.value,),)
+                authAPI.register(RegisterRequest( _sessionName.value, _password.value,_businessName.value,))
                 _registerSuccess.value = true
             } catch (e: Exception) {
-                val errorMsg = when (e.message) {
-                    "ALREADY_EXISTS" -> "Ese nombre de acceso ya está ocupado, intenta con uno diferente"
-                    else -> "Error al registrarse: ${e.localizedMessage ?: "Error desconocido"}"
-                }
-                _errorMessage.value = errorMsg
-                android.util.Log.e("RegisterVM", "Error: ${e.localizedMessage}", e)
+                _errorMessage.value = e.toUserFriendlyMessage(isRegister = true)
             } finally {
                 _isLoading.value = false
             }
