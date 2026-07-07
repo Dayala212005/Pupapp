@@ -1,6 +1,8 @@
 package com.pdm0126.puppapp.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -120,43 +122,6 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier) {
     )
 }
 
-@Composable
-fun QuantityControl(
-    quantity: Int,
-    onIncrease: () -> Unit,
-    onDecrease: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), CircleShape)
-            .padding(4.dp)
-    ) {
-        FilledTonalIconButton(
-            onClick  = onDecrease,
-            shape    = CircleShape,
-            modifier = Modifier.size(32.dp),
-            enabled  = quantity > 0
-        ) {
-            Icon(Icons.Filled.Remove, contentDescription = "Reducir", modifier = Modifier.size(16.dp))
-        }
-        Text(
-            text       = quantity.toString(),
-            fontSize   = 15.sp,
-            fontWeight = FontWeight.Bold,
-            modifier   = Modifier.padding(horizontal = 12.dp)
-        )
-        FilledIconButton(
-            onClick  = onIncrease,
-            shape    = CircleShape,
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = "Aumentar", modifier = Modifier.size(16.dp))
-        }
-    }
-}
-
 data class OrderPreview(
     val id: Int,
     val orderNumber: Int,
@@ -180,80 +145,152 @@ fun OrderCard(order: OrderPreview, modifier: Modifier = Modifier, onClick: () ->
     val diffHours = TimeUnit.MILLISECONDS.toHours(diffMillis)
 
     val isVeryOld = (order.statusId in 1..3) && diffHours >= 24
-    
-    val backgroundColor = when {
-        order.statusId in 1..2 && diffMinutes >= 30 -> Red40.copy(alpha = 0.15f)
-        order.statusId in 1..2 && diffMinutes >= 15 -> Amber40.copy(alpha = 0.15f)
-        else -> MaterialTheme.colorScheme.surface
+
+    // Logica para el color de la barra indicadora lateral
+    val indicatorColor = when {
+        order.statusId in 1..2 && diffMinutes >= 30 -> Color(0xFFE53935) // Rojo (Tarde)
+        order.statusId in 1..2 && diffMinutes >= 15 -> Color(0xFFFFB300) // Ámbar (Demora)
+        order.statusId == 1 -> Color(0xFFFB8C00) // Naranja (Pendiente - Estado normal)
+        order.statusId == 2 -> Color(0xFF1E88E5) // Azul (Preparando)
+        order.statusId == 3 -> Color(0xFF43A047) // Verde (Listo)
+        else -> Color.Gray // Otros (Entregado, Cancelado)
     }
 
     Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFDFDFA)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        Column(Modifier.padding(12.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
+        // Estructura principal para la barra lateral
+        Row(modifier = Modifier.fillMaxWidth()) {
+
+            // Barra Vertical Indicadora
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .defaultMinSize(minHeight = 100.dp)
+                    .background(indicatorColor)
+            )
+
+            // Contenido de la Tarjeta
+            Column(
+                Modifier
+                    .padding(12.dp)
+                    .weight(1f)
             ) {
-                val formattedNumber = order.orderNumber.toString().padStart(4, '0')
-                val headerText = if (order.showId) {
-                    "#$formattedNumber (ID: ${order.id})"
-                } else {
-                    "#$formattedNumber"
+                // Encabezado
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val formattedNumber = order.orderNumber.toString().padStart(4, '0')
+                    val headerText = if (order.showId) {
+                        "#$formattedNumber (ID: ${order.id})"
+                    } else {
+                        "#$formattedNumber"
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "$headerText${if (order.reference != null) " - ${order.reference}" else ""}",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        // Alerta crítica de +24h
+                        if (isVeryOld) {
+                            Spacer(Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.Filled.Warning,
+                                contentDescription = "Orden muy antigua",
+                                tint = Color(0xFFE53935), // Rojo
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    StatusChip(order.statusId)
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
+
+                Spacer(Modifier.height(4.dp))
+
+                // Info Secundaria (Cliente y Reloj)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(
-                        text = "$headerText${if (order.reference != null) " - ${order.reference}" else ""}",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = "${order.clientName ?: "Consumidor Final"} · ${order.time}",
+                        fontSize = 13.sp,
+                        color = Color.Gray
                     )
-                    if (isVeryOld) {
-                        Spacer(Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.Filled.Warning,
-                            contentDescription = "Orden muy antigua",
-                            tint = Red40,
-                            modifier = Modifier.size(16.dp)
+
+                    // Indicador de tiempo transcurrido (solo si está demorada)
+                    if (order.statusId in 1..2 && diffMinutes >= 15) {
+                        Text(
+                            text = "Hace $diffMinutes min",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = indicatorColor
                         )
                     }
                 }
-                StatusChip(order.statusId)
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "${order.clientName ?: "Consumidor Final"} · ${order.time}",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            
-            if (order.items.isNotEmpty()) {
+
                 Spacer(Modifier.height(8.dp))
-                order.items.forEach { item ->
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)
+                Spacer(Modifier.height(8.dp))
+
+                // Lista de Productos
+                if (order.items.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        order.items.forEach { item ->
+                            Row(verticalAlignment = Alignment.Top) {
+                                Text(
+                                    text = "${item.quantity}x",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.width(28.dp) // Espacio fijo para alinear las cantidades
+                                )
+                                Text(
+                                    text = item.productName,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)
+                Spacer(Modifier.height(8.dp))
+
+                // Footer
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(
-                        text = "• ${item.quantity}x ${item.productName}",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 4.dp)
+                        text = "${order.itemCount} productos",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = "\$%.2f".format(order.total),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-            Spacer(Modifier.height(6.dp))
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("${order.itemCount} productos", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("\$%.2f".format(order.total), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
             }
         }
     }

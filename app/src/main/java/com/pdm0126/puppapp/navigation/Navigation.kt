@@ -57,7 +57,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 @Composable
 fun PupappNavigation(sessionManager: SessionManager, authAPI: AuthAPI) {
     val scope = rememberCoroutineScope()
-    // Se fuerza la recomposicion de todo la navegación y ViewModels cuando cambia el estado de la sesion.
     key(sessionManager.isLoggedIn) {
         val backStack: NavBackStack<NavKey> = rememberNavBackStack(
             if (sessionManager.isLoggedIn) Route.Orders as NavKey else Route.Login as NavKey

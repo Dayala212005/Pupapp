@@ -6,7 +6,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -61,17 +60,6 @@ fun MenuScreen(
         .fillMaxSize()
         .padding(padding)
     ) {
-        // Icono de fondo decorativo
-        Icon(
-            imageVector = Icons.Default.Fastfood,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.04f),
-            modifier = Modifier
-                .size(400.dp)
-                .align(Alignment.BottomCenter)
-                .offset(y = 100.dp)
-        )
-
         when {
             isLoading && products.isEmpty() -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -103,13 +91,13 @@ fun MenuScreen(
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = "¡Tu menú está esperando!",
+                        text = "¡Prepara tu menú!",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Agrega tus productos y organízalos por categorías para empezar a vender.",
+                        text = "Agrega tus productos y organízalos por categorías para empezar a registrar.",
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -138,7 +126,7 @@ fun MenuScreen(
                             onClick = { viewModel.openCreateDialog("") },
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                containerColor = Color(0xFFFDFDFA)
                             ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -357,75 +345,133 @@ private fun ProductDialog(viewModel: MenuViewModel) {
 
     AlertDialog(
         onDismissRequest = { viewModel.closeDialog() },
+        containerColor = Color(0xFFFDFDFA),
+        shape = RoundedCornerShape(20.dp),
         title = {
-            Text(if (editingProduct == null) "Agregar producto" else "Editar producto")
+            Text(
+                text = if (editingProduct == null) "Agregar producto" else "Editar producto",
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 20.sp,
+                color = MaterialTheme.colorScheme.secondary
+            )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
                 OutlinedTextField(
-                    value         = name,
+                    value = name,
                     onValueChange = { viewModel.onNameChange(it) },
-                    label         = { Text("Nombre") },
-                    singleLine    = true,
-                    modifier      = Modifier.fillMaxWidth()
+                    label = { Text("Nombre") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = Color.Gray
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
+
                 OutlinedTextField(
-                    value         = priceBase,
+                    value = priceBase,
                     onValueChange = { viewModel.onPriceBaseChange(it) },
-                    label         = { Text("Precio base") },
-                    singleLine    = true,
+                    label = { Text("Precio base") },
+                    singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier      = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = Color.Gray
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
+
                 OutlinedTextField(
-                    value         = category,
+                    value = category,
                     onValueChange = { viewModel.onCategoryChange(it) },
-                    label         = { Text("Categoría") },
-                    singleLine    = true,
-                    modifier      = Modifier.fillMaxWidth()
+                    label = { Text("Categoría") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = Color.Gray
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 if (categories.isNotEmpty()) {
-                    Text("Categorías existentes:", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        text = "Categorías existentes:",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                    )
                     LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         items(categories) { cat ->
+                            val isSelected = category == cat
                             FilterChip(
-                                selected = category == cat,
-                                onClick  = { viewModel.onCategoryChange(cat) },
-                                label    = { Text(cat, fontSize = 11.sp) }
+                                selected = isSelected,
+                                onClick = { viewModel.onCategoryChange(cat) },
+                                label = { Text(cat, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    selectedLabelColor = MaterialTheme.colorScheme.primary,
+                                    containerColor = Color(0xFFF3F4F6),
+                                    labelColor = Color.DarkGray
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    borderColor = Color.Transparent,
+                                    selectedBorderColor = Color.Transparent,
+                                    disabledBorderColor = Color.Transparent,
+                                    enabled = true,
+                                    selected = isSelected
+                                )
                             )
                         }
                     }
                 }
 
                 OutlinedButton(
-                    onClick  = {
+                    onClick = {
                         imagePicker.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                         )
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp)
+                        .height(48.dp)
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Seleccionar imagen")
+                    Text("Seleccionar imagen", fontWeight = FontWeight.Medium, fontSize = 14.sp)
                 }
-
-                // Preview de la imagen seleccionada
-                if (imageBytes != null) {
-                    val bitmap = remember(imageBytes) {
-                        BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes!!.size)
-                    }
-                    Image(
-                        bitmap      = bitmap.asImageBitmap(),
+                imageBytes?.let { bytes ->
+                    AsyncImage(
+                        model = bytes,
                         contentDescription = null,
-                        modifier    = Modifier
+                        modifier = Modifier
                             .fillMaxWidth()
-                            .height(150.dp)
-                            .clip(RoundedCornerShape(8.dp)),
+                            .height(140.dp)
+                            .padding(top = 4.dp)
+                            .clip(RoundedCornerShape(12.dp)),
                         contentScale = ContentScale.Crop
                     )
                 }
@@ -434,15 +480,27 @@ private fun ProductDialog(viewModel: MenuViewModel) {
         confirmButton = {
             Button(
                 onClick = { viewModel.onSaveClick() },
-                enabled = !isLoading
+                enabled = !isLoading,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                modifier = Modifier.height(44.dp)
             ) {
-                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                else Text("Guardar")
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                } else {
+                    Text("Guardar", fontWeight = FontWeight.Bold)
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = { viewModel.closeDialog() }) {
-                Text("Cancelar")
+            TextButton(
+                onClick = { viewModel.closeDialog() },
+                modifier = Modifier.height(44.dp)
+            ) {
+                Text("Cancelar", color = Color.Gray, fontWeight = FontWeight.Medium)
             }
         }
     )
@@ -469,10 +527,4 @@ private fun compressBitmap(bitmap: Bitmap, maxDimension: Int = 800, quality: Int
     val outputStream = ByteArrayOutputStream()
     resizedBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
     return outputStream.toByteArray()
-}
-
-@Preview
-@Composable
-fun PreviewMenu() {
-    MenuScreen()
 }

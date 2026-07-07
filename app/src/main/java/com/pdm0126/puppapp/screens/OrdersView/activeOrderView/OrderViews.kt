@@ -135,7 +135,7 @@ fun ActiveOrdersScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No hay órdenes activas",
+                                text = "¡Felicidades!, no hay pedidos pendientes",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -204,8 +204,3 @@ fun ActiveOrdersScreen(
     }
 }
 
-@Preview
-@Composable
-fun PreviewOrder() {
-    ActiveOrdersScreen()
-}

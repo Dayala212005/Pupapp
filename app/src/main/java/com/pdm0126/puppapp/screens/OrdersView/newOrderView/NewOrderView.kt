@@ -32,7 +32,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.pdm0126.puppapp.components.QuantityControl
 import com.pdm0126.puppapp.data.model.Product
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,7 +68,7 @@ fun NewOrderScreen(
     Scaffold(
         topBar = {
             Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
-                // Barra de búsqueda
+                // Barra de búsqueda con fondo neutro
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -77,20 +76,22 @@ fun NewOrderScreen(
                     TextField(
                         value = searchQuery,
                         onValueChange = { viewModel.onSearchQueryChange(it) },
-                        placeholder = { Text("Buscar producto...", fontSize = 14.sp) },
-                        leadingIcon = { Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp)) },
+                        placeholder = { Text("Buscar producto...", fontSize = 14.sp, color = Color.Gray) },
+                        leadingIcon = { Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp), tint = Color.Gray) },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
-                                    Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp), tint = Color.Gray)
                                 }
                             }
                         },
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            focusedContainerColor = Color(0xFFF3F4F6),
+                            unfocusedContainerColor = Color(0xFFF3F4F6),
                             focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                         ),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
@@ -98,17 +99,15 @@ fun NewOrderScreen(
                     )
                 }
 
-                // Selector de Categoría (Estilo Segmentado/Cuadrado)
+                // Selector de Categoría (sin fondo pesado, con espaciado)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                 ) {
                     LazyRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         item {
                             CategoryTab(
@@ -164,7 +163,7 @@ fun NewOrderScreen(
                 }
             }
 
-            // Barra Flotante del Carrito
+            // Barra Flotante
             AnimatedVisibility(
                 visible = selectedItems.isNotEmpty(),
                 enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -204,7 +203,7 @@ fun NewOrderScreen(
                             }
                             Spacer(Modifier.width(12.dp))
                             Text(
-                                "Ver Resumen", 
+                                "Ver Resumen",
                                 color = MaterialTheme.colorScheme.onPrimary,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -391,8 +390,7 @@ private fun OrderSummaryDialog(
             .padding(24.dp)
             .wrapContentHeight(),
         shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 6.dp
+        color = MaterialTheme.colorScheme.background,
     ) {
         Column(
             modifier = Modifier.padding(24.dp)
@@ -460,14 +458,14 @@ private fun OrderSummaryDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("Total Calculado", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+                            Text("Total Calculado", fontSize = 12.sp, color = Color.Black)
                             Text("$%.2f".format(total), fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
                         }
                         
                         OutlinedTextField(
                             value = customTotal,
                             onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null || it.last() == '.') onCustomTotalChange(it) },
-                            placeholder = { Text("Ajustar", fontSize = 12.sp) },
+                            placeholder = { Text("Opcional", fontSize = 12.sp) },
                             label = { Text("Total Final", fontSize = 10.sp) },
                             singleLine = true,
                             textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.End, fontWeight = FontWeight.Bold),
