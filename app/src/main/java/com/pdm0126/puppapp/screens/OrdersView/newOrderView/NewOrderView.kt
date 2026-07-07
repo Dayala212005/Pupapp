@@ -99,24 +99,27 @@ fun NewOrderScreen(
                     )
                 }
 
-                // Selector de Categoría (sin fondo pesado, con espaciado)
-                Box(
+                // Selector de Categoría
+                LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        item {
-                            CategoryTab(
-                                text = "Todos",
-                                isSelected = selectedCategory == null,
-                                onClick = { viewModel.onCategorySelect(null) }
+                    item {
+                        CategoryTab(
+                            text = "Todos",
+                            isSelected = selectedCategory == null,
+                            onClick = { viewModel.onCategorySelect(null) }
+                        )
+                    }
+                    items(categories) { category ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            VerticalDivider(
+                                modifier = Modifier.height(24.dp),
+                                thickness = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                             )
-                        }
-                        items(categories) { category ->
                             CategoryTab(
                                 text = category,
                                 isSelected = selectedCategory == category,
@@ -125,6 +128,7 @@ fun NewOrderScreen(
                         }
                     }
                 }
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             }
         }
     ) { paddingValues ->
@@ -255,12 +259,13 @@ private fun CategoryTab(
 ) {
     Surface(
         onClick = onClick,
-        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+        shape = RoundedCornerShape(4.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
+        contentColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
     ) {
         Box(
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = 20.dp, vertical = 12.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(

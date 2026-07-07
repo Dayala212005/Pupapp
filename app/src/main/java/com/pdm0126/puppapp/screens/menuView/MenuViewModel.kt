@@ -10,7 +10,10 @@ import com.pdm0126.puppapp.data.model.Product
 import com.pdm0126.puppapp.data.remote.PupappAPI.ProductsAPI
 import com.pdm0126.puppapp.utils.toUserFriendlyMessage
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MenuViewModel(
@@ -19,6 +22,13 @@ class MenuViewModel(
 
     private val _products = MutableStateFlow<List<Product>>(emptyList())
     val products = _products.asStateFlow()
+
+    val categories = _products.map { list ->
+        list.mapNotNull { it.category }.distinct().sorted()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _selectedCategory = MutableStateFlow<String?>(null)
+    val selectedCategory = _selectedCategory.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
@@ -74,6 +84,7 @@ class MenuViewModel(
     fun onNameChange(value: String)      { _name.value = value }
     fun onPriceBaseChange(value: String) { _priceBase.value = value }
     fun onCategoryChange(value: String)  { _category.value = value }
+    fun onCategorySelect(category: String?) { _selectedCategory.value = category }
     fun onImageSelected(bytes: ByteArray, fileName: String) {
         _imageBytes.value = bytes
         _imageName.value  = fileName
