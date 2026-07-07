@@ -53,6 +53,26 @@ class NewOrderViewModel(
     private val _orderSuccess = MutableStateFlow(false)
     val orderSuccess = _orderSuccess.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    private val _selectedCategory = MutableStateFlow<String?>(null)
+    val selectedCategory = _selectedCategory.asStateFlow()
+
+    val filteredProducts: StateFlow<List<Product>> = combine(
+        _products, _searchQuery, _selectedCategory
+    ) { products, query, category ->
+        products.filter { product ->
+            val matchesQuery = product.name.contains(query, ignoreCase = true)
+            val matchesCategory = category == null || product.category == category
+            matchesQuery && matchesCategory
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val categories: StateFlow<List<String>> = _products
+        .map { list -> list.mapNotNull { it.category }.distinct() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val groupedProducts: StateFlow<Map<String, List<Product>>> = _products
         .map { list -> list.groupBy { it.category ?: "Sin categoría" } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
@@ -95,6 +115,8 @@ class NewOrderViewModel(
     fun onOrderReferenceChange(value: String) { _orderReference.value = value }
     fun onAdjustmentNoteChange(value: String) { _adjustmentNote.value = value }
     fun onCustomTotalChange(value: String) { _customTotal.value = value }
+    fun onSearchQueryChange(value: String) { _searchQuery.value = value }
+    fun onCategorySelect(category: String?) { _selectedCategory.value = category }
 
     fun onIncrease(productId: Int) {
         val current = _quantities.value.toMutableMap()

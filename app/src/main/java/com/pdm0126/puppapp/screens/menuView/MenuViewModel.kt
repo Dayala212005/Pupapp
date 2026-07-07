@@ -79,11 +79,13 @@ class MenuViewModel(
         _imageName.value  = fileName
     }
 
+    private val _lastUsedCategory = MutableStateFlow("")
+
     fun openCreateDialog(category: String) {
         _editingProduct.value = null
         _name.value      = ""
         _priceBase.value = ""
-        _category.value  = category
+        _category.value  = category.ifEmpty { _lastUsedCategory.value }
         _imageBytes.value = null
         _imageName.value  = null
         _showDialog.value = true
@@ -108,6 +110,8 @@ class MenuViewModel(
             _errorMessage.value = "Por favor, completa todos los campos"
             return
         }
+
+        _lastUsedCategory.value = _category.value
 
         viewModelScope.launch {
             _isLoading.value = true

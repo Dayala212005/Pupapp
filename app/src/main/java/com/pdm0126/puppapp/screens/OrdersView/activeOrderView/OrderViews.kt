@@ -181,7 +181,7 @@ fun ActiveOrdersScreen(
             dragHandle = { BottomSheetDefaults.DragHandle() },
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
-            Box(Modifier.fillMaxHeight(0.833f)) { // Force 5/6 height (leaving 1/6 at top)
+            Box(Modifier.fillMaxHeight(0.97f)) { // Force 5/6 height (leaving 1/6 at top)
                 NewOrderScreen(
                     onNavigateBack = {
                         showNewOrderSheet = false

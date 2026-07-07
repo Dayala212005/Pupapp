@@ -1,34 +1,41 @@
 package com.pdm0126.puppapp.screens.OrdersView.newOrderView
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Fastfood
-import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.pdm0126.puppapp.components.QuantityControl
-import com.pdm0126.puppapp.components.SectionHeader
 import com.pdm0126.puppapp.data.model.Product
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewOrderScreen(
     onNavigateBack: () -> Unit = {},
@@ -37,7 +44,10 @@ fun NewOrderScreen(
     val customerName    by viewModel.customerName.collectAsState()
     val orderReference  by viewModel.orderReference.collectAsState()
     val customTotal     by viewModel.customTotal.collectAsState()
-    val groupedProducts by viewModel.groupedProducts.collectAsState()
+    val filteredProducts by viewModel.filteredProducts.collectAsState()
+    val categories      by viewModel.categories.collectAsState()
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val searchQuery     by viewModel.searchQuery.collectAsState()
     val quantities      by viewModel.quantities.collectAsState()
     val selectedItems   by viewModel.selectedItems.collectAsState()
     val total           by viewModel.total.collectAsState()
@@ -45,7 +55,7 @@ fun NewOrderScreen(
     val errorMessage    by viewModel.errorMessage.collectAsState()
     val orderSuccess    by viewModel.orderSuccess.collectAsState()
 
-    var currentStep by remember { mutableIntStateOf(1) }
+    var showSummary by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
     // Navegar de vuelta cuando la orden se crea exitosamente
@@ -57,60 +67,62 @@ fun NewOrderScreen(
     }
 
     Scaffold(
-        bottomBar = {
-            if (selectedItems.isNotEmpty()) {
-                Surface(
-                    tonalElevation = 8.dp,
-                    shadowElevation = 8.dp,
-                    modifier = Modifier.fillMaxWidth()
+        topBar = {
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
+                // Barra de búsqueda
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .navigationBarsPadding()
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { viewModel.onSearchQueryChange(it) },
+                        placeholder = { Text("Buscar producto...", fontSize = 14.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp)) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                                    Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f).height(52.dp)
+                    )
+                }
+
+                // Selector de Categoría (Estilo Segmentado/Cuadrado)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start
                     ) {
-                        if (currentStep == 1) {
-                            Button(
-                                onClick = { currentStep = 2 },
-                                shape = RoundedCornerShape(24.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp)
-                            ) {
-                                Text("Siguiente", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            }
-                        } else {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                OutlinedButton(
-                                    onClick = { currentStep = 1 },
-                                    shape = RoundedCornerShape(24.dp),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(56.dp)
-                                ) {
-                                    Text("Atrás", fontWeight = FontWeight.Bold)
-                                }
-                                Button(
-                                    onClick = { viewModel.onCreateOrderClick() },
-                                    enabled = !isLoading,
-                                    shape = RoundedCornerShape(24.dp),
-                                    modifier = Modifier
-                                        .weight(2f)
-                                        .height(56.dp)
-                                ) {
-                                    if (isLoading) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(24.dp),
-                                            color = MaterialTheme.colorScheme.onPrimary
-                                        )
-                                    } else {
-                                        Text("Registrar orden", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                    }
-                                }
-                            }
+                        item {
+                            CategoryTab(
+                                text = "Todos",
+                                isSelected = selectedCategory == null,
+                                onClick = { viewModel.onCategorySelect(null) }
+                            )
+                        }
+                        items(categories) { category ->
+                            CategoryTab(
+                                text = category,
+                                isSelected = selectedCategory == category,
+                                onClick = { viewModel.onCategorySelect(category) }
+                            )
                         }
                     }
                 }
@@ -125,191 +137,233 @@ fun NewOrderScreen(
                 indication = null
             ) { focusManager.clearFocus() }
         ) {
-            // Icono de fondo decorativo
-            Icon(
-                imageVector = Icons.Default.Restaurant,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                modifier = Modifier
-                    .size(400.dp)
-                    .offset(y = 100.dp)
-            )
-
-            when {
-                isLoading && groupedProducts.isEmpty() -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            if (filteredProducts.isEmpty() && !isLoading) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Default.Inbox, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.outline)
+                    Text("No hay productos", color = MaterialTheme.colorScheme.outline)
                 }
-                errorMessage != null && groupedProducts.isEmpty() -> {
-                    Column(
-                        modifier            = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(errorMessage ?: "", color = MaterialTheme.colorScheme.error)
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = { viewModel.loadProducts() }) {
-                            Text("Reintentar")
-                        }
-                    }
-                }
-                currentStep == 1 -> {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        // Campos iniciales
-                        item(span = { GridItemSpan(2) }) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                OutlinedTextField(
-                                    value         = customerName,
-                                    onValueChange = { viewModel.onCustomerNameChange(it) },
-                                    label         = { Text("Cliente", fontSize = 12.sp) },
-                                    placeholder   = { Text("Opcional", fontSize = 12.sp) },
-                                    singleLine    = true,
-                                    shape         = RoundedCornerShape(16.dp),
-                                    modifier      = Modifier.weight(1f)
-                                )
-                                OutlinedTextField(
-                                    value         = orderReference,
-                                    onValueChange = { viewModel.onOrderReferenceChange(it) },
-                                    label         = { Text("Ref.", fontSize = 12.sp) },
-                                    singleLine    = true,
-                                    shape         = RoundedCornerShape(16.dp),
-                                    modifier      = Modifier.weight(1f)
-                                )
-                            }
-                        }
-
-                        item(span = { GridItemSpan(2) }) {
-                            SectionHeader("Seleccionar productos")
-                        }
-
-                        // Productos agrupados por categoría
-                        groupedProducts.forEach { (category, items) ->
-                            item(span = { GridItemSpan(2) }) {
-                                Text(
-                                    text       = category,
-                                    fontSize   = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color      = MaterialTheme.colorScheme.primary,
-                                    modifier   = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                                )
-                            }
-                            items(items) { product ->
-                                ProductCard(
-                                    product  = product,
-                                    quantity = quantities[product.id] ?: 0,
-                                    onIncrease = { viewModel.onIncrease(product.id) },
-                                    onDecrease = { viewModel.onDecrease(product.id) }
-                                )
-                            }
-                        }
-                    }
-                }
-                currentStep == 2 -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        SectionHeader("Resumen de la orden")
-                        Spacer(Modifier.height(16.dp))
-
-                        OrderSummaryCard(
-                            selectedItems = selectedItems,
-                            total         = total,
-                            customTotal   = customTotal,
-                            onCustomTotalChange = { viewModel.onCustomTotalChange(it) }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(filteredProducts) { product ->
+                        MinimalProductCard(
+                            product = product,
+                            quantity = quantities[product.id] ?: 0,
+                            onIncrease = { viewModel.onIncrease(product.id) },
+                            onDecrease = { viewModel.onDecrease(product.id) }
                         )
-
-                        errorMessage?.let {
-                            Spacer(Modifier.height(16.dp))
-                            Text(
-                                text     = it,
-                                color    = MaterialTheme.colorScheme.error,
-                                fontSize = 12.sp
-                            )
-                        }
                     }
                 }
             }
+
+            // Barra Flotante del Carrito
+            AnimatedVisibility(
+                visible = selectedItems.isNotEmpty(),
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                Surface(
+                    onClick = { showSummary = true },
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .navigationBarsPadding()
+                        .fillMaxWidth()
+                        .height(64.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    tonalElevation = 8.dp,
+                    shadowElevation = 8.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = selectedItems.sumOf { it.second }.toString(),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                "Ver Resumen", 
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Text(
+                            text = "$%.2f".format(total),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 18.sp
+                        )
+                    }
+                }
+            }
+
+            if (isLoading && filteredProducts.isEmpty()) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            }
+        }
+    }
+
+    if (showSummary) {
+        Dialog(
+            onDismissRequest = { showSummary = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            OrderSummaryDialog(
+                customerName = customerName,
+                orderReference = orderReference,
+                selectedItems = selectedItems,
+                total = total,
+                customTotal = customTotal,
+                isLoading = isLoading,
+                errorMessage = errorMessage,
+                onCustomerNameChange = { viewModel.onCustomerNameChange(it) },
+                onOrderReferenceChange = { viewModel.onOrderReferenceChange(it) },
+                onCustomTotalChange = { viewModel.onCustomTotalChange(it) },
+                onConfirm = { viewModel.onCreateOrderClick() },
+                onDismiss = { showSummary = false }
+            )
         }
     }
 }
 
+@Composable
+private fun CategoryTab(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                fontSize = 13.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+            )
+        }
+    }
+}
 
 @Composable
-private fun ProductCard(
+private fun MinimalProductCard(
     product: Product,
     quantity: Int,
     onIncrease: () -> Unit,
     onDecrease: () -> Unit
 ) {
     Card(
-        shape    = RoundedCornerShape(20.dp),
-        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border   = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column {
-            // Imagen del producto
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-            ) {
+            Box(modifier = Modifier.fillMaxWidth().height(90.dp)) {
                 AsyncImage(
                     model = product.imageUrl,
                     contentDescription = product.name,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
                     error = painterResource(id = android.R.drawable.ic_menu_gallery),
                     placeholder = painterResource(id = android.R.drawable.ic_menu_gallery)
                 )
+                if (quantity > 0) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape,
+                        modifier = Modifier.padding(6.dp).size(24.dp).align(Alignment.TopEnd)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(quantity.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
 
-            Column(modifier = Modifier.padding(10.dp)) {
+            Column(modifier = Modifier.padding(8.dp)) {
                 Text(
                     product.name,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    modifier = Modifier.padding(bottom = 2.dp)
-                )
-                Text(
-                    text     = "$%.2f".format(product.priceBase),
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color    = MaterialTheme.colorScheme.primary
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
                 )
-                
-                Spacer(Modifier.height(8.dp))
-
-                if (quantity == 0) {
-                    Button(
-                        onClick        = onIncrease,
-                        shape          = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        modifier       = Modifier.fillMaxWidth().height(36.dp)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Añadir", fontSize = 12.sp)
-                    }
-                } else {
-                    QuantityControl(
-                        quantity   = quantity,
-                        onIncrease = onIncrease,
-                        onDecrease = onDecrease,
-                        modifier   = Modifier.align(Alignment.CenterHorizontally)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "$%.2f".format(product.priceBase),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
                     )
+                    
+                    Box(
+                        contentAlignment = Alignment.CenterEnd,
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(if (quantity > 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
+                        ) {
+                            if (quantity > 0) {
+                                IconButton(
+                                    onClick = onDecrease,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Remove, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                }
+                                Text(
+                                    text = quantity.toString(),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = onIncrease,
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            ) {
+                                Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onPrimary)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -317,89 +371,138 @@ private fun ProductCard(
 }
 
 @Composable
-private fun OrderSummaryCard(
+private fun OrderSummaryDialog(
+    customerName: String,
+    orderReference: String,
     selectedItems: List<Pair<Product, Int>>,
     total: Double,
     customTotal: String,
-    onCustomTotalChange: (String) -> Unit
+    isLoading: Boolean,
+    errorMessage: String?,
+    onCustomerNameChange: (String) -> Unit,
+    onOrderReferenceChange: (String) -> Unit,
+    onCustomTotalChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
 ) {
-    Card(
-        shape    = RoundedCornerShape(24.dp),
-        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        modifier = Modifier.fillMaxWidth()
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+            .wrapContentHeight(),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 6.dp
     ) {
-        Column(Modifier.padding(14.dp)) {
-            Text(
-                text       = "Resumen",
-                fontWeight = FontWeight.SemiBold,
-                fontSize   = 13.sp,
-                modifier   = Modifier.padding(bottom = 8.dp)
-            )
-            selectedItems.forEach { (product, qty) ->
-                SummaryRow(
-                    label  = "${product.name} × $qty",
-                    amount = "\$%.2f".format(product.priceBase * qty)
-                )
-            }
-            Spacer(Modifier.height(6.dp))
-            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
-            Spacer(Modifier.height(10.dp))
-
-            // Fila de Total Original (solo si hay un total personalizado)
-            if (customTotal.isNotEmpty()) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier              = Modifier.fillMaxWidth()
-                ) {
-                    Text("Subtotal calculado", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("\$%.2f".format(total), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-
+        Column(
+            modifier = Modifier.padding(24.dp)
+        ) {
             Row(
-                verticalAlignment     = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                modifier              = Modifier.fillMaxWidth()
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Total Final", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                
+                Text("Confirmar Orden", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, null)
+                }
+            }
+            
+            Spacer(Modifier.height(16.dp))
+
+            // Información del Cliente en el Resumen
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
-                    value         = customTotal,
-                    onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null || it.last() == '.') onCustomTotalChange(it) },
-                    placeholder   = { Text("\$%.2f".format(total), fontSize = 14.sp) },
-                    singleLine    = true,
-                    textStyle     = LocalTextStyle.current.copy(
-                        textAlign  = androidx.compose.ui.text.style.TextAlign.End,
-                        fontWeight = FontWeight.Bold,
-                        color      = MaterialTheme.colorScheme.primary,
-                        fontSize   = 14.sp
-                    ),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
-                    ),
-                    modifier = Modifier.width(100.dp).height(48.dp)
+                    value = customerName,
+                    onValueChange = onCustomerNameChange,
+                    label = { Text("Cliente", fontSize = 11.sp) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1.5f)
                 )
+                OutlinedTextField(
+                    value = orderReference,
+                    onValueChange = onOrderReferenceChange,
+                    label = { Text("Ref.", fontSize = 11.sp) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Box(modifier = Modifier.heightIn(max = 200.dp)) {
+                        Column {
+                            selectedItems.forEach { (product, qty) ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("${qty}x ${product.name}", fontSize = 14.sp)
+                                    Text("$%.2f".format(product.priceBase * qty), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                }
+                            }
+                        }
+                    }
+                    
+                    HorizontalDivider(Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Total Calculado", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+                            Text("$%.2f".format(total), fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                        }
+                        
+                        OutlinedTextField(
+                            value = customTotal,
+                            onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null || it.last() == '.') onCustomTotalChange(it) },
+                            placeholder = { Text("Ajustar", fontSize = 12.sp) },
+                            label = { Text("Total Final", fontSize = 10.sp) },
+                            singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.End, fontWeight = FontWeight.Bold),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.width(110.dp)
+                        )
+                    }
+                }
+            }
+
+            errorMessage?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+            }
+
+            Spacer(Modifier.height(24.dp))
+            
+            Button(
+                onClick = onConfirm,
+                enabled = !isLoading,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp)
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(size = 24.dp, color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Text("Confirmar y Registrar", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun SummaryRow(label: String, amount: String) {
-    Row(
-        horizontalArrangement = Arrangement.SpaceBetween,
-        modifier              = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp)
-    ) {
-        Text(label,  fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(amount, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+private fun CircularProgressIndicator(size: androidx.compose.ui.unit.Dp, color: Color) {
+    CircularProgressIndicator(modifier = Modifier.size(size), color = color)
 }
 
 @Preview

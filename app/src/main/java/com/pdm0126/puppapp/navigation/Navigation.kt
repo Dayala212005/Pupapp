@@ -47,7 +47,8 @@ import com.pdm0126.puppapp.screens.authorView.loginview.LoginScreen
 import com.pdm0126.puppapp.screens.authorView.registrerView.RegisterScreen
 import com.pdm0126.puppapp.screens.historyView.HistoryScreen
 import com.pdm0126.puppapp.screens.menuView.MenuScreen
-
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import com.pdm0126.puppapp.data.remote.PupappAPI.AuthAPI
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,24 +63,9 @@ fun PupappNavigation(sessionManager: SessionManager, authAPI: AuthAPI) {
             if (sessionManager.isLoggedIn) Route.Orders as NavKey else Route.Login as NavKey
         )
 
-        fun handleTabSelection(index: Int) {
-            when (index) {
-                0 -> {
-                    backStack.clear()
-                    backStack.add(Route.Orders)
-                }
-
-                1 -> {
-                    backStack.clear()
-                    backStack.add(Route.Menu)
-                }
-
-                2 -> {
-                    backStack.clear()
-                    backStack.add(Route.History)
-                }
-            }
-        }
+        val pagerState = if (sessionManager.isLoggedIn) {
+            rememberPagerState(pageCount = { 3 })
+        } else null
 
         val currentRoute = backStack.lastOrNull()
         val showBars =
@@ -136,15 +122,41 @@ fun PupappNavigation(sessionManager: SessionManager, authAPI: AuthAPI) {
             },
             bottomBar = {
                 if (showBars) {
-                    val selectedIndex = when (currentRoute) {
-                        is Route.Orders -> 0
-                        is Route.Menu -> 1
-                        is Route.History -> 2
-                        else -> 0
+                    if (pagerState != null) {
+                        PupappBottomNav(
+                            selectedIndex = pagerState.currentPage,
+                            onItemSelected = { index ->
+                                scope.launch {
+                                    pagerState.scrollToPage(index)
+                                }
+                            }
+                        )
+                    } else {
+                        val selectedIndex = when (currentRoute) {
+                            is Route.Orders -> 0
+                            is Route.Menu -> 1
+                            is Route.History -> 2
+                            else -> 0
+                        }
+                        PupappBottomNav(
+                            selectedIndex = selectedIndex,
+                            onItemSelected = { index ->
+                                when (index) {
+                                    0 -> {
+                                        backStack.clear()
+                                        backStack.add(Route.Orders)
+                                    }
+                                    1 -> {
+                                        backStack.clear()
+                                        backStack.add(Route.Menu)
+                                    }
+                                    2 -> {
+                                        backStack.clear()
+                                        backStack.add(Route.History)
+                                    }
+                                }
+                            })
                     }
-                    PupappBottomNav(
-                        selectedIndex = selectedIndex,
-                        onItemSelected = { handleTabSelection(it) })
                 }
             }
         ) { innerPadding ->
@@ -171,52 +183,57 @@ fun PupappNavigation(sessionManager: SessionManager, authAPI: AuthAPI) {
             }
 
             CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
-                val entryProvider = remember(innerPadding) {
-                    entryProvider<NavKey> {
-                        entry<Route.Login> {
-                            LoginScreen(
-                                onNavigateToOrders = {
-                                    // Solo navegamos si la sesión se ha iniciado correctamente
-                                    if (sessionManager.isLoggedIn) {
-                                        backStack.clear()
-                                        backStack.add(Route.Orders)
-                                    }
-                                },
-                                onNavigateToRegister = {
-                                    backStack.add(Route.Register)
-                                }
-                            )
-                        }
-                        entry<Route.Register> {
-                            RegisterScreen(
-                                onNavigateBack = {
-                                    backStack.removeLastOrNull()
-                                }
-                            )
-                        }
-                        entry<Route.Orders> {
-                            ActiveOrdersScreen(padding = innerPadding)
-                        }
-                        entry<Route.Menu> {
-                            MenuScreen(padding = innerPadding)
-                        }
-                        entry<Route.History> {
-                            HistoryScreen(padding = innerPadding)
+                if (sessionManager.isLoggedIn && pagerState != null) {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize(),
+                        beyondViewportPageCount = 1
+                    ) { page ->
+                        when (page) {
+                            0 -> ActiveOrdersScreen(padding = innerPadding)
+                            1 -> MenuScreen(padding = innerPadding)
+                            2 -> HistoryScreen(padding = innerPadding)
                         }
                     }
+                } else {
+                    val entryProvider = remember(innerPadding) {
+                        entryProvider<NavKey> {
+                            entry<Route.Login> {
+                                LoginScreen(
+                                    onNavigateToOrders = {
+                                        // Solo navegamos si la sesión se ha iniciado correctamente
+                                        if (sessionManager.isLoggedIn) {
+                                            backStack.clear()
+                                            backStack.add(Route.Orders)
+                                        }
+                                    },
+                                    onNavigateToRegister = {
+                                        backStack.add(Route.Register)
+                                    }
+                                )
+                            }
+                            entry<Route.Register> {
+                                RegisterScreen(
+                                    onNavigateBack = {
+                                        backStack.removeLastOrNull()
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    val entries = rememberDecoratedNavEntries(
+                        backStack = backStack,
+                        entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator()),
+                        entryProvider = entryProvider
+                    )
+
+                    NavDisplay(
+                        entries = entries,
+                        onBack = { if (backStack.size > 1) backStack.removeAt(backStack.size - 1) },
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
-
-                val entries = rememberDecoratedNavEntries(
-                    backStack = backStack,
-                    entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator()),
-                    entryProvider = entryProvider
-                )
-
-                NavDisplay(
-                    entries = entries,
-                    onBack = { if (backStack.size > 1) backStack.removeAt(backStack.size - 1) },
-                    modifier = Modifier.fillMaxSize()
-                )
             }
         }
     }

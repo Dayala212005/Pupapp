@@ -6,13 +6,18 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -21,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +51,8 @@ fun MenuScreen(
     val isLoading    by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val showDialog   by viewModel.showDialog.collectAsState()
+
+    var collapsedCategories by remember { mutableStateOf(setOf<String>()) }
 
     // Agrupar productos por categoría
     val groupedProducts = products.groupBy { it.category ?: "Sin categoría" }
@@ -95,16 +103,26 @@ fun MenuScreen(
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = "Aún no tienes productos",
+                        text = "¡Tu menú está esperando!",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Pulsa el botón de + para agregar tu primer producto al menú",
+                        text = "Agrega tus productos y organízalos por categorías para empezar a vender.",
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(Modifier.height(24.dp))
+                    Button(
+                        onClick = { viewModel.openCreateDialog("") },
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth(0.8f).height(54.dp)
+                    ) {
+                        Icon(Icons.Default.Add, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Agregar mi primer producto", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
             else -> {
@@ -115,42 +133,72 @@ fun MenuScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    item(span = { GridItemSpan(2) }) {
+                        Card(
+                            onClick = { viewModel.openCreateDialog("") },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Add, 
+                                    null, 
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        "Nuevo Producto", 
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     groupedProducts.forEach { (category, items) ->
+                        val isCollapsed = collapsedCategories.contains(category)
+
                         item(span = { GridItemSpan(2) }) {
                             CategoryHeader(
                                 title    = category,
-                                onAdd    = { viewModel.openCreateDialog(category) }
+                                isCollapsed = isCollapsed,
+                                onToggle = {
+                                    collapsedCategories = if (isCollapsed) {
+                                        collapsedCategories - category
+                                    } else {
+                                        collapsedCategories + category
+                                    }
+                                },
+                                onAdd = { viewModel.openCreateDialog(category) }
                             )
                         }
-                        items(items) { product ->
-                            MenuProductCard(
-                                product  = product,
-                                onEdit   = { viewModel.openEditDialog(product) },
-                                onDelete = { viewModel.onDeleteClick(product.id) }
-                            )
+                        
+                        if (!isCollapsed) {
+                            items(items) { product ->
+                                MenuProductCard(
+                                    product  = product,
+                                    onEdit   = { viewModel.openEditDialog(product) },
+                                    onDelete = { viewModel.onDeleteClick(product.id) }
+                                )
+                            }
                         }
                     }
                     item(span = { GridItemSpan(2) }) { Spacer(Modifier.height(80.dp)) }
                 }
             }
         }
-
-        FloatingActionButton(
-            onClick = { viewModel.openCreateDialog("") },
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(24.dp)
-                .size(64.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Add, 
-                contentDescription = "Agregar producto",
-                modifier = Modifier.size(28.dp)
-            )
-        }
-
+        
+        // El FAB se eliminó para evitar duplicidad con el de órdenes
+        
         if (showDialog) {
             ProductDialog(viewModel = viewModel)
         }
@@ -160,23 +208,55 @@ fun MenuScreen(
 // ── Category header ──────────────────────────────────────────────────────────
 
 @Composable
-private fun CategoryHeader(title: String, onAdd: () -> Unit) {
-    Row(
-        verticalAlignment     = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        modifier              = Modifier.fillMaxWidth()
+private fun CategoryHeader(
+    title: String, 
+    isCollapsed: Boolean,
+    onToggle: () -> Unit,
+    onAdd: () -> Unit
+) {
+    Surface(
+        onClick = onToggle,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
     ) {
-        Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-        TextButton(
-            onClick        = onAdd,
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+        Row(
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier              = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
-            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Agregar", fontSize = 12.sp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = if (isCollapsed) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = title, 
+                    fontWeight = FontWeight.Bold, 
+                    fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            
+            IconButton(onClick = onAdd) {
+                Icon(
+                    imageVector = Icons.Default.Add, 
+                    contentDescription = "Añadir a $title",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
+
+// Se eliminó AddProductPlaceholder
 
 // ── Menu product card ────────────────────────────────────────────────────────────
 @Composable
@@ -252,6 +332,11 @@ private fun ProductDialog(viewModel: MenuViewModel) {
     val editingProduct by viewModel.editingProduct.collectAsState()
     val isLoading      by viewModel.isLoading.collectAsState()
     val imageBytes     by viewModel.imageBytes.collectAsState()
+    val products       by viewModel.products.collectAsState()
+
+    val categories = remember(products) {
+        products.mapNotNull { it.category }.distinct()
+    }
 
     val context = LocalContext.current
 
@@ -299,6 +384,22 @@ private fun ProductDialog(viewModel: MenuViewModel) {
                     singleLine    = true,
                     modifier      = Modifier.fillMaxWidth()
                 )
+
+                if (categories.isNotEmpty()) {
+                    Text("Categorías existentes:", style = MaterialTheme.typography.labelSmall)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(categories) { cat ->
+                            FilterChip(
+                                selected = category == cat,
+                                onClick  = { viewModel.onCategoryChange(cat) },
+                                label    = { Text(cat, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+                }
 
                 OutlinedButton(
                     onClick  = {
