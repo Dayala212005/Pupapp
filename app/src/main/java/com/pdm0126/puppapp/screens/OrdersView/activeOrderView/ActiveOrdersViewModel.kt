@@ -90,7 +90,8 @@ class ActiveOrdersViewModel(
             total = finalTotal,
             statusId = statusId,
             items = items,
-            showId = false
+            showId = false,
+            createdAt = createdAt
         )
     }
 

@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Date
+import java.util.concurrent.TimeUnit
 import com.pdm0126.puppapp.data.model.OrderItem
 import com.pdm0126.puppapp.ui.Amber40
 import com.pdm0126.puppapp.ui.Green40
@@ -165,16 +167,31 @@ data class OrderPreview(
     val total: Double,
     val statusId: Int,
     val items: List<OrderItem> = emptyList(),
-    val showId: Boolean = false
+    val showId: Boolean = false,
+    val createdAt: Date? = null
 )
 
 @Composable
 fun OrderCard(order: OrderPreview, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
+    val currentTime = System.currentTimeMillis()
+    val orderTime = order.createdAt?.time ?: currentTime
+    val diffMillis = currentTime - orderTime
+    val diffMinutes = TimeUnit.MILLISECONDS.toMinutes(diffMillis)
+    val diffHours = TimeUnit.MILLISECONDS.toHours(diffMillis)
+
+    val isVeryOld = (order.statusId in 1..3) && diffHours >= 24
+    
+    val backgroundColor = when {
+        order.statusId in 1..2 && diffMinutes >= 30 -> Red40.copy(alpha = 0.15f)
+        order.statusId in 1..2 && diffMinutes >= 15 -> Amber40.copy(alpha = 0.15f)
+        else -> MaterialTheme.colorScheme.surface
+    }
+
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
@@ -190,12 +207,23 @@ fun OrderCard(order: OrderPreview, modifier: Modifier = Modifier, onClick: () ->
                 } else {
                     "#$formattedNumber"
                 }
-                Text(
-                    text = "$headerText${if (order.reference != null) " - ${order.reference}" else ""}",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "$headerText${if (order.reference != null) " - ${order.reference}" else ""}",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (isVeryOld) {
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Filled.Warning,
+                            contentDescription = "Orden muy antigua",
+                            tint = Red40,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
                 StatusChip(order.statusId)
             }
             Spacer(Modifier.height(4.dp))

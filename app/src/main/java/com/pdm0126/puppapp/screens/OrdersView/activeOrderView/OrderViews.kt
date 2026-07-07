@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +27,7 @@ import com.pdm0126.puppapp.components.OrderPreview
 import com.pdm0126.puppapp.components.OrderStatus
 import com.pdm0126.puppapp.components.OrderStatusBottomSheet
 import com.pdm0126.puppapp.screens.OrdersView.newOrderView.NewOrderScreen
+import java.util.concurrent.TimeUnit
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,6 +41,24 @@ fun ActiveOrdersScreen(
     var selectedOrder by remember { mutableStateOf<OrderPreview?>(null) }
     var showNewOrderSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val veryOldOrdersCount = remember(uiState.orders) {
+        uiState.orders.count { order ->
+            val orderTime = order.createdAt?.time ?: System.currentTimeMillis()
+            val diffHours = TimeUnit.MILLISECONDS.toHours(System.currentTimeMillis() - orderTime)
+            (order.statusId in 1..3) && diffHours >= 24
+        }
+    }
+
+    LaunchedEffect(veryOldOrdersCount) {
+        if (veryOldOrdersCount > 0) {
+            snackbarHostState.showSnackbar(
+                message = "Tienes $veryOldOrdersCount orden(es) con más de 24 horas sin entregar.",
+                duration = SnackbarDuration.Long
+            )
+        }
+    }
 
     Box(modifier = Modifier
         .fillMaxSize()
@@ -70,7 +90,7 @@ fun ActiveOrdersScreen(
                             color = MaterialTheme.colorScheme.primaryContainer
                         ) {
                             Text(
-                                text = "${uiState.orders.count { it.statusId == OrderStatus.PREPARING.id }} activas",
+                                text = "${uiState.orders.count { it.statusId != OrderStatus.DELIVERED.id }} activas",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontWeight = FontWeight.Medium,
@@ -147,6 +167,11 @@ fun ActiveOrdersScreen(
                 modifier = Modifier.size(28.dp)
             )
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 
     if (showNewOrderSheet) {
