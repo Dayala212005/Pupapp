@@ -48,9 +48,14 @@ import com.pdm0126.puppapp.screens.authorView.registrerView.RegisterScreen
 import com.pdm0126.puppapp.screens.historyView.HistoryScreen
 import com.pdm0126.puppapp.screens.menuView.MenuScreen
 
+import com.pdm0126.puppapp.data.remote.PupappAPI.AuthAPI
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PupappNavigation(sessionManager: SessionManager) {
+fun PupappNavigation(sessionManager: SessionManager, authAPI: AuthAPI) {
+    val scope = rememberCoroutineScope()
     // Se fuerza la recomposicion de todo la navegación y ViewModels cuando cambia el estado de la sesion.
     key(sessionManager.isLoggedIn) {
         val backStack: NavBackStack<NavKey> = rememberNavBackStack(
@@ -111,8 +116,9 @@ fun PupappNavigation(sessionManager: SessionManager) {
                         navigationIcon = {},
                         actions = {
                             IconButton(onClick = {
-                                sessionManager.clearSession()
-                                KtorClient.resetClient()
+                                scope.launch {
+                                    authAPI.logout()
+                                }
                             }) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.Logout,

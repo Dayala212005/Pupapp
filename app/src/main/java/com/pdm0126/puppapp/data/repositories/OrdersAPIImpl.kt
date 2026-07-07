@@ -30,7 +30,7 @@ class OrdersAPIImpl(
     private val orderDao: OrderDao,
     private val orderItemDao: OrderItemDao
 ) : OrdersAPI {
-    private val client = KtorClient.client
+    private val client get() = KtorClient.client
 
     override val ordersFlow: Flow<List<Order>> = orderDao.getAllOrdersWithItems().map { list ->
         list.map { it.toModel() }

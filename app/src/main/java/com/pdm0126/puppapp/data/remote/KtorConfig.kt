@@ -25,6 +25,7 @@ import kotlinx.serialization.json.Json
 object KtorClient {
     const val BASE_URL = "https://pupapp-api.vercel.app"
     lateinit var sessionManager: SessionManager
+    var onSessionExpired: (suspend () -> Unit)? = null
 
     private var _client: HttpClient? = null
 
@@ -33,7 +34,7 @@ object KtorClient {
             _client ?: createClient().also { _client = it }
         }
 
-    fun resetClient() {
+    fun resetClient() = synchronized(this) {
         _client?.close()
         _client = null
     }
@@ -82,12 +83,13 @@ object KtorClient {
                                 val body = response.body<RefreshResponse>()
                                 sessionManager.updateTokens(body.accessToken, refreshToken)
                                 BearerTokens(body.accessToken, refreshToken)
+                            } else if (response.status.value == 401 || response.status.value == 403) {
+                                onSessionExpired?.invoke()
+                                null
                             } else {
-                                sessionManager.clearSession()
                                 null
                             }
                         } catch (e: Exception) {
-                            sessionManager.clearSession()
                             null
                         }
                     }

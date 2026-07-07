@@ -14,9 +14,12 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 class AuthAPIImpl(private val database: AppDatabase) : AuthAPI {
-    private val client = KtorClient.client
+    private val client get() = KtorClient.client
 
     override suspend fun login(request: LoginRequest): UserSession {
         val response = client.post("/api/auth/login") {
@@ -46,7 +49,10 @@ class AuthAPIImpl(private val database: AppDatabase) : AuthAPI {
     }
 
     override suspend fun logout() {
-        KtorClient.sessionManager.clearSession()
-        database.clearAllTables()
+        withContext(Dispatchers.IO + NonCancellable) {
+            KtorClient.resetClient()
+            database.clearAllTables()
+            KtorClient.sessionManager.clearSession()
+        }
     }
 }

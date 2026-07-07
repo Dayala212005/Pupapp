@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 class ProductsAPIImpl(private val productDao: ProductDao) : ProductsAPI {
-    private val client = KtorClient.client
+    private val client get() = KtorClient.client
 
     override val productsFlow: Flow<List<Product>> = productDao.getAllProducts().map { entities ->
         entities.map { it.toModel() }

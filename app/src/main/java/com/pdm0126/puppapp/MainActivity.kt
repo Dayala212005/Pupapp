@@ -13,13 +13,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val appProvider = (application as PupappApplication).appProvider
         val sessionManager = SessionManager(this)
         KtorClient.sessionManager = sessionManager
+        val authRepository = appProvider.provideAuthRepository()
+        KtorClient.onSessionExpired = { authRepository.logout() }
 
         enableEdgeToEdge()
         setContent {
             PupappTheme {
-                PupappNavigation(sessionManager)
+                PupappNavigation(sessionManager, appProvider.provideAuthRepository())
             }
         }
     }
